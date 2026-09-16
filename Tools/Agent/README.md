@@ -10,6 +10,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Start-WishlistPiTask.p
 
 The default hotkey is `Ctrl+Alt+W`. Runtime state is kept under `%LOCALAPPDATA%\Wishlist\AgentHost\`, reports under `%LOCALAPPDATA%\Wishlist\AgentReports\`, and the scheduler defaults to two workers. Applying a task requires a remote `dev` branch; workers clone `origin/dev` into retained normal clones and create `feature/*` or `fix/*` branches.
 
+Worker changes start from `origin/dev` and stay isolated on a dedicated `feature/*` or `fix/*` branch.
+
 Preview a task without starting Pi:
 
 ```powershell
