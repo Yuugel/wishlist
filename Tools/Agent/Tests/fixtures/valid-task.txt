@@ -1,0 +1,9 @@
+@@PI_TASK
+project: Wishlist
+ticket: 123
+type: implementation
+scope: inventory
+risk: medium
+model: auto
+
+Implement the bounded inventory task.

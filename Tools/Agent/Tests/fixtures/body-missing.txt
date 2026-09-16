@@ -1,0 +1,7 @@
+@@PI_TASK
+project: Wishlist
+ticket: 125
+type: implementation
+scope: inventory
+risk: low
+model: auto

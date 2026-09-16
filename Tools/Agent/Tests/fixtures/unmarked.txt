@@ -1,0 +1,1 @@
+Copied browser text that must never be forwarded.

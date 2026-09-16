@@ -1,0 +1,5 @@
+@@PI_TASK
+project: Wishlist
+this header has no colon
+
+The malformed header must be rejected.

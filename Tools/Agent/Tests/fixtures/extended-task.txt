@@ -1,0 +1,13 @@
+@@PI_TASK
+project: Wishlist
+ticket: 124
+type: implementation
+scope: inventory
+risk: low
+model: auto
+priority: high
+review: required
+session: inventory
+validation: targeted
+
+Keep the optional metadata intact.

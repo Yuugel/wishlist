@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "protocol": {
+    "marker": "@@PI_TASK",
+    "version": "1"
+  },
+  "models": {
+    "luna": {
+      "displayName": "Luna",
+      "provider": "openai-codex",
+      "launcherTarget": "gpt-5.6-luna",
+      "thinking": "max",
+      "aliases": ["luna", "luna-max", "luna max"],
+      "enabled": true,
+      "guarded": false
+    },
+    "sol": {
+      "displayName": "Sol",
+      "provider": "openai-codex",
+      "launcherTarget": "gpt-5.6-sol",
+      "thinking": "high",
+      "aliases": ["sol"],
+      "enabled": true,
+      "guarded": false
+    },
+    "astra": {
+      "displayName": "Astra",
+      "provider": "openai-codex",
+      "launcherTarget": "gpt-6-astra",
+      "thinking": "high",
+      "aliases": ["astra"],
+      "enabled": true,
+      "guarded": true
+    },
+    "terra": {
+      "displayName": "Terra",
+      "provider": "openai-codex",
+      "launcherTarget": "gpt-5.6-terra",
+      "thinking": "high",
+      "aliases": ["terra"],
+      "enabled": true,
+      "guarded": false
+    }
+  },
+  "guardedModelPolicy": {
+    "allowExplicitWithFlag": true,
+    "allowAutomatic": false
+  },
+  "automaticRoutes": [
+    {
+      "name": "architecture-sensitive",
+      "when": {
+        "risk": "architecture-sensitive"
+      },
+      "model": "sol",
+      "reason": "Architecture-sensitive work is routed to Sol."
+    },
+    {
+      "name": "high-risk",
+      "when": {
+        "risk": "high"
+      },
+      "model": "sol",
+      "reason": "High-risk work is routed to Sol."
+    },
+    {
+      "name": "important-review",
+      "when": {
+        "type": "review"
+      },
+      "model": "sol",
+      "reason": "Important reviews use Sol."
+    },
+    {
+      "name": "uncertain-investigation",
+      "when": {
+        "type": "investigation"
+      },
+      "model": "sol",
+      "reason": "Uncertain investigations use Sol."
+    },
+    {
+      "name": "bounded-default",
+      "when": {},
+      "model": "luna",
+      "reason": "Luna is the default for bounded implementation work."
+    }
+  ],
+  "skillRules": [
+    {
+      "name": "integration-gate",
+      "when": {
+        "scope": "integration"
+      },
+      "skills": ["wishlist-integration-gate"]
+    },
+    {
+      "name": "feature-default",
+      "when": {},
+      "skills": ["wishlist-feature-delivery"]
+    }
+  ],
+  "launcher": {
+    "configured": true,
+    "command": "pi.cmd",
+    "arguments": [
+      "--provider",
+      "{provider}",
+      "--model",
+      "{launcherTarget}",
+      "--thinking",
+      "{thinking}",
+      "--mode",
+      "json",
+      "--session-id",
+      "{sessionId}",
+      "--approve",
+      "--print"
+    ],
+    "inputMode": "stdin",
+    "outputMode": "json"
+  },
+  "context": {
+    "includeMetadata": [
+      "priority",
+      "review",
+      "validation",
+      "session"
+    ]
+  }
+}
