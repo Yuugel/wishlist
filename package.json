@@ -1,0 +1,38 @@
+{
+  "name": "wishlist",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Technical foundation for the Wishlist MVP",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "next": "16.3.5",
+    "pg": "8.23.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.3",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "drizzle-kit": "0.31.10",
+    "dotenv": "17.4.2",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.5",
+    "typescript": "5.9.3"
+  }
+}

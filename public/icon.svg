@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Wishlist</title>
+  <rect width="64" height="64" rx="16" fill="#0f172a"/>
+  <path fill="#60a5fa" d="M32 47.5 14.5 30.2C4.2 20 11.5 8 21.1 8c5.1 0 8.7 2.8 10.9 6.4C34.2 10.8 37.8 8 42.9 8 52.5 8 59.8 20 49.5 30.2L32 47.5Z"/>
+</svg>
