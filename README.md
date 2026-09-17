@@ -54,8 +54,10 @@ verschlüsselte Environment Variable hinterlegt.
 ## Drizzle und Migrationen
 
 Die Drizzle-Konfiguration liegt in `drizzle.config.ts` und verwendet
-`DATABASE_URL`. Das Schema liegt unter `src/server/db/schema.ts`; es enthält in
-dieser Foundation absichtlich noch keine fachlichen Tabellen.
+`DATABASE_URL`. Das Schema liegt unter `src/server/db/schema.ts`; neben der
+Auth-Grundlage enthält es die MVP-Tabellen für Gruppen, Mitgliedschaften und
+Einladungen. Die serverseitige Gruppen-API und ihre Grenzen sind in
+`docs/groups.md` dokumentiert.
 
 ```bash
 # Aus dem Schema eine Migration erzeugen
@@ -76,11 +78,12 @@ Hosting-Umgebung, niemals in Git.
 
 - `src/app/` – App-Router-Seiten, Layout, Manifest und Route Handler
 - `src/server/db/` – Node.js-only Datenbank-Client und Drizzle-Schema
+- `src/server/groups/` – server-only Gruppen-Domain, Repository und Invite-Token
 - `public/` – statische Assets, derzeit das Manifest-Icon
 - `spikes/passkey-first-auth/` – isolierter Passkey-/Recovery-Spike; nicht Teil
   des Produktionscodes
 
 Das Manifest und die Metadata bereiten eine spätere Installation vor. Offline-
 Caching, Push und ein Service Worker sind in dieser Foundation bewusst nicht
-enthalten. Authentifizierung und fachliche Wishlist-Funktionen folgen in
-separaten Tickets.
+enthalten. Die interaktive Passkey-/Login-UI und weitere fachliche Wishlist-
+Funktionen folgen in separaten Tickets.
