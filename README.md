@@ -88,6 +88,7 @@ Hosting-Umgebung, niemals in Git.
 - `src/server/db/` – Node.js-only Datenbank-Client und Drizzle-Schema
 - `src/server/auth/` – serverseitige Passkey-, Recovery-, Ceremony- und Sessionlogik
 - `src/server/groups/` – server-only Gruppen-Domain, Repository und Invite-Token
+- `src/server/visibility/` – gemeinsame serverseitige Gruppen-/Wish-Sichtbarkeit
 - `public/` – statische Assets, derzeit das Manifest-Icon
 - `spikes/passkey-first-auth/` – isolierter Passkey-/Recovery-Spike; nicht Teil
   des Produktionscodes

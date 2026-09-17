@@ -5,7 +5,7 @@ import {
   NO_STORE_HEADERS,
   readJsonBody,
   rejectCrossOriginMutation,
-  serializeWish,
+  serializeOwnerWish,
   wishErrorResponse,
 } from "./_utils";
 
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const service = await getWishService();
     const wishes = await service.listWishes({ ownerId: session.userId });
     return NextResponse.json(
-      { wishes: wishes.map(serializeWish) },
+      { wishes: wishes.map(serializeOwnerWish) },
       { headers: NO_STORE_HEADERS },
     );
   } catch (error) {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       groupIds: body.groupIds as string[] | null | undefined,
     });
     return NextResponse.json(
-      { wish: serializeWish(wish) },
+      { wish: serializeOwnerWish(wish) },
       { status: 201, headers: NO_STORE_HEADERS },
     );
   } catch (error) {

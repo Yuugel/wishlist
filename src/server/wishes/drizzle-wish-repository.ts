@@ -12,7 +12,7 @@ import type {
   WishRepository,
 } from "./wish-repository";
 
-const wishColumns = {
+export const wishColumns = {
   id: wishes.id,
   ownerId: wishes.ownerId,
   title: wishes.title,

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { AuthError } from "@/server/auth/auth-error";
 import { authErrorResponse } from "@/server/auth/route-response";
 import { WishServiceError } from "@/server/wishes/wish-service";
+import {
+  serializeOwnerWishView,
+  toOwnerWishView,
+} from "@/server/wishes/wish-view";
 import type { WishChangeSet, WishRecord } from "@/server/wishes/wish-repository";
 
 export const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
@@ -41,22 +45,13 @@ export function isUuid(value: string): boolean {
   );
 }
 
+export function serializeOwnerWish(wish: WishRecord) {
+  return serializeOwnerWishView(toOwnerWishView(wish));
+}
+
+/** Kept as a compatibility name for the owner-only wish endpoint. */
 export function serializeWish(wish: WishRecord) {
-  return {
-    id: wish.id,
-    ownerId: wish.ownerId,
-    title: wish.title,
-    description: wish.description,
-    link: wish.link,
-    priceText: wish.priceText,
-    groups: wish.groups.map((group) => ({
-      id: group.id,
-      name: group.name,
-      createdAt: group.createdAt.toISOString(),
-    })),
-    createdAt: wish.createdAt.toISOString(),
-    updatedAt: wish.updatedAt.toISOString(),
-  };
+  return serializeOwnerWish(wish);
 }
 
 export function serializeChanges(changes: WishChangeSet) {

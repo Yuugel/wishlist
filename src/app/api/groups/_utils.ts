@@ -3,12 +3,19 @@ import { AuthError } from "@/server/auth/auth-error";
 import { authErrorResponse } from "@/server/auth/route-response";
 import { GroupServiceError } from "@/server/groups/group-service";
 import type { GroupDetails, GroupSummary } from "@/server/groups/group-types";
+import { serializeGroupWishView } from "@/server/wishes/wish-view";
+import type { GroupWishVisibility } from "@/server/visibility/visibility-types";
 
 export const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 
 export async function getGroupService() {
   const serviceModule = await import("@/server/groups/service");
   return serviceModule.groupService;
+}
+
+export async function getGroupVisibilityService() {
+  const serviceModule = await import("@/server/visibility/service");
+  return serviceModule.visibilityService;
 }
 
 /** Reject an explicitly cross-origin mutation while allowing non-browser API clients. */
@@ -55,6 +62,21 @@ export function serializeGroupDetails(group: GroupDetails) {
     members: group.members.map((member) => ({
       id: member.id,
       displayName: member.displayName,
+    })),
+  };
+}
+
+export function serializeGroupWishVisibility(
+  visibility: GroupWishVisibility,
+) {
+  return {
+    groupId: visibility.groupId,
+    members: visibility.members.map(({ member, wishes }) => ({
+      member: {
+        id: member.id,
+        displayName: member.displayName,
+      },
+      wishes: wishes.map(serializeGroupWishView),
     })),
   };
 }

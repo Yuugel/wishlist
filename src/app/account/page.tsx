@@ -12,6 +12,9 @@ export default function AccountPage() {
           <Link className="button-link" href="/wishlist">
             Meine Wunschliste
           </Link>
+          <Link className="button-link secondary" href="/groups">
+            Meine Gruppen
+          </Link>
         </div>
       </section>
     </main>

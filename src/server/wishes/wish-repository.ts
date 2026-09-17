@@ -9,13 +9,23 @@ export type WishValues = {
   priceText: string | null;
 };
 
-export type WishRecord = WishValues & {
+export type WishIdentity = {
   id: string;
   ownerId: string;
-  groups: GroupSummary[];
   createdAt: Date;
   updatedAt: Date;
 };
+
+export type WishRecord = WishValues & WishIdentity & {
+  groups: GroupSummary[];
+};
+
+/**
+ * A wish row returned for one already-authorized group context. It deliberately
+ * carries no group collection: the visibility query has already constrained
+ * it to the requested group.
+ */
+export type WishVisibilityRecord = WishValues & WishIdentity;
 
 export type WishChangeSet = {
   changedFields: WishField[];

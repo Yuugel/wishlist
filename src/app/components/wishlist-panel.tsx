@@ -239,6 +239,9 @@ export function WishlistPanel({ initialGroupId }: { initialGroupId?: string }) {
         <button type="button" onClick={startCreate} disabled={busy || loading}>
           Wunsch anlegen
         </button>
+        <Link className="button-link secondary" href="/groups">
+          Gruppen
+        </Link>
         <Link className="button-link secondary" href="/account">
           Konto
         </Link>

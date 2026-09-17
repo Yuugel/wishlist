@@ -19,11 +19,23 @@ Alle Endpunkte benötigen eine aktive Session:
 - `POST /api/groups` mit `{ "name": "..." }` – Gruppe erstellen; der Ersteller
   wird als normales Mitglied angelegt
 - `GET /api/groups/:groupId` – Gruppe und nur `id`/`displayName` der Mitglieder
+- `GET /api/groups/:groupId/members` – die Mitgliederliste mit derselben
+  serverseitigen Mitgliedschaftsprüfung
+- `GET /api/groups/:groupId/wishes` – nach aktuellem Mitglied gruppierte
+  Wünsche, die genau dieser Gruppe zugeordnet sind
 - `POST /api/groups/:groupId/invites` – als Mitglied einen Invite erzeugen
 - `POST /api/groups/join` mit `{ "token": "..." }` – Invite verwenden;
   wiederholte Requests desselben Nutzers sind idempotent
 - `POST /api/groups/:groupId/leave` – ausschließlich die eigene
   Mitgliedschaft beenden
+
+Die Lese-API für Gruppen verwendet eine gemeinsame serverseitige
+Visibility-Schicht. Sie prüft die aktuelle Mitgliedschaft und filtert Wishes
+über die konkrete `wish_groups`-Zuordnung; UI-Filter sind dafür nicht
+maßgeblich. Private Wishes und Wishes anderer Gruppen werden nicht ausgeliefert.
+Owner- und Viewer-Wishes werden in getrennten DTOs serialisiert. Die Owner-
+Antwort enthält keine späteren Reservierungs-/Kaufinformationen; eine solche
+Erweiterung ist ausschließlich für die Viewer-Form vorgesehen.
 
 Invite-Tokens enthalten einen 128-Bit-Selector und ein 256-Bit-Geheimnis. In
 der Datenbank stehen nur Selector und SHA-256-Digest. Ein Token ist sieben Tage

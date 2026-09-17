@@ -5,8 +5,8 @@ import {
   groupErrorResponse,
   isUuid,
   NO_STORE_HEADERS,
-  serializeGroupDetails,
-} from "../_utils";
+  serializeGroupWishVisibility,
+} from "../../_utils";
 
 type RouteContext = {
   params: Promise<{ groupId: string }>;
@@ -27,14 +27,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
     }
 
     const visibilityService = await getGroupVisibilityService();
-    const group = await visibilityService.getGroup({
+    const visibility = await visibilityService.listGroupWishes({
       groupId,
       userId: session.userId,
     });
-    return NextResponse.json(
-      { group: serializeGroupDetails(group) },
-      { headers: NO_STORE_HEADERS },
-    );
+    return NextResponse.json(serializeGroupWishVisibility(visibility), {
+      headers: NO_STORE_HEADERS,
+    });
   } catch (error) {
     return groupErrorResponse(error);
   }

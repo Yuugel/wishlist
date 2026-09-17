@@ -7,7 +7,7 @@ import {
   readJsonBody,
   rejectCrossOriginMutation,
   serializeChanges,
-  serializeWish,
+  serializeOwnerWish,
   wishErrorResponse,
 } from "../_utils";
 
@@ -52,7 +52,7 @@ async function updateWish(request: NextRequest, context: RouteContext) {
     });
     return NextResponse.json(
       {
-        wish: serializeWish(result.wish),
+        wish: serializeOwnerWish(result.wish),
         changes: serializeChanges(result.changes),
       },
       { headers: NO_STORE_HEADERS },

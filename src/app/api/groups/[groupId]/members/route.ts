@@ -5,8 +5,7 @@ import {
   groupErrorResponse,
   isUuid,
   NO_STORE_HEADERS,
-  serializeGroupDetails,
-} from "../_utils";
+} from "../../_utils";
 
 type RouteContext = {
   params: Promise<{ groupId: string }>;
@@ -32,7 +31,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
       userId: session.userId,
     });
     return NextResponse.json(
-      { group: serializeGroupDetails(group) },
+      {
+        groupId: group.id,
+        members: group.members.map((member) => ({
+          id: member.id,
+          displayName: member.displayName,
+        })),
+      },
       { headers: NO_STORE_HEADERS },
     );
   } catch (error) {
