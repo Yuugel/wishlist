@@ -71,6 +71,7 @@ export const drizzleTakeoverRepository: TakeoverRepository = {
              and owner_membership.user_id = w.owner_id
             where wg.wish_id = w.id
           )
+        for update of w
       ), inserted as (
         insert into wish_takeovers (
           wish_id,
@@ -124,6 +125,7 @@ export const drizzleTakeoverRepository: TakeoverRepository = {
              and owner_membership.user_id = w.owner_id
             where wg.wish_id = w.id
           )
+        for update of w
       ), updated as (
         update wish_takeovers takeover
         set status = ${input.to}::wish_takeover_status,
@@ -185,6 +187,7 @@ export const drizzleTakeoverRepository: TakeoverRepository = {
              and owner_membership.user_id = w.owner_id
             where wg.wish_id = w.id
           )
+        for update of w
       ), deleted as (
         delete from wish_takeovers takeover
         where takeover.wish_id in (select id from authorized_wish)

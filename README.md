@@ -44,7 +44,9 @@ PWA-Basis.
    Passkey erstellt werden; <http://localhost:3000/login> bietet den
    username-losen Passkey-Login. Der bei der Erstellung einmalig angezeigte
    Recovery-Code kann unter <http://localhost:3000/recover> zum sicheren Ersatz
-   verlorener Passkeys verwendet werden.
+   verlorener Passkeys verwendet werden. Unter `/activity` stehen außerdem die
+  persistenten In-App-Hinweise zu Änderungen an übernommenen Wünschen; die
+  Liste ist nur über `GET /api/activity` mit der eigenen Session abrufbar.
 
 ## Build und Produktion lokal prüfen
 
@@ -63,8 +65,9 @@ verschlüsselte Environment Variable hinterlegt.
 
 Die Drizzle-Konfiguration liegt in `drizzle.config.ts` und verwendet
 `DATABASE_URL`. Das Schema liegt unter `src/server/db/schema.ts`; neben der
-Auth-Grundlage enthält es die MVP-Tabellen für Gruppen, Mitgliedschaften und
-Einladungen. Die serverseitige Gruppen-API und ihre Grenzen sind in
+Auth-Grundlage enthält es die MVP-Tabellen für Gruppen, Mitgliedschaften,
+Einladungen, Wishes, Takeovers und persistente Activity-Einträge. Die
+serverseitige Gruppen-API und ihre Grenzen sind in
 `docs/groups.md` dokumentiert.
 
 ```bash
@@ -89,6 +92,7 @@ Hosting-Umgebung, niemals in Git.
 - `src/server/auth/` – serverseitige Passkey-, Recovery-, Ceremony- und Sessionlogik
 - `src/server/groups/` – server-only Gruppen-Domain, Repository und Invite-Token
 - `src/server/visibility/` – gemeinsame serverseitige Gruppen-/Wish-Sichtbarkeit
+- `src/server/activity/` – server-only Activity-Liste und Wish-Change-Events
 - `public/` – statische Assets, derzeit das Manifest-Icon
 - `spikes/passkey-first-auth/` – isolierter Passkey-/Recovery-Spike; nicht Teil
   des Produktionscodes

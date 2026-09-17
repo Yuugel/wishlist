@@ -193,11 +193,9 @@ export function WishlistPanel({ initialGroupId }: { initialGroupId?: string }) {
       });
       setShowForm(false);
       setEditingId(null);
-      setMessage(
-        result.changes?.isNoop
-          ? "Keine Änderungen gespeichert."
-          : "Wunsch gespeichert.",
-      );
+      // A no-op is intentionally silent: it has no activity side effect and
+      // should not look like a notification to the owner.
+      setMessage(result.changes?.isNoop ? undefined : "Wunsch gespeichert.");
     } catch (error) {
       if (error instanceof ApiRequestError && error.status === 401) {
         router.replace("/login");
@@ -241,6 +239,9 @@ export function WishlistPanel({ initialGroupId }: { initialGroupId?: string }) {
         </button>
         <Link className="button-link secondary" href="/groups">
           Gruppen
+        </Link>
+        <Link className="button-link secondary" href="/activity">
+          Activity
         </Link>
         <Link className="button-link secondary" href="/account">
           Konto

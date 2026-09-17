@@ -275,6 +275,36 @@ button:disabled {
   color: var(--muted);
 }
 
+.activity-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.activity-item {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+
+.activity-item h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.activity-item p {
+  margin: 0.75rem 0 0;
+  line-height: 1.5;
+}
+
+.activity-item time {
+  display: block;
+  margin-top: 0.75rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .optional,
 .hint {
   color: var(--muted);

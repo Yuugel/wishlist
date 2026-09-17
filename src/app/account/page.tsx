@@ -15,6 +15,9 @@ export default function AccountPage() {
           <Link className="button-link secondary" href="/groups">
             Meine Gruppen
           </Link>
+          <Link className="button-link secondary" href="/activity">
+            Activity
+          </Link>
         </div>
       </section>
     </main>

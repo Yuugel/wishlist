@@ -52,6 +52,9 @@ export const wishTakeoverStatus = pgEnum("wish_takeover_status", [
   "reserved",
   "purchased",
 ]);
+export const activityEventType = pgEnum("activity_event_type", [
+  "wish_changed",
+]);
 
 export const users = pgTable(
   "users",
@@ -180,6 +183,54 @@ export const wishTakeovers = pgTable(
     check(
       "wish_takeovers_purchased_at_check",
       sql`${table.purchasedAt} is null or ${table.purchasedAt} >= ${table.createdAt}`,
+    ),
+  ],
+);
+
+export const activities = pgTable(
+  "activities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    eventType: activityEventType("event_type").notNull(),
+    // Keep the reference nullable so a later deletion/tombstone flow can
+    // preserve the activity with its stored wish title.
+    wishId: uuid("wish_id").references(() => wishes.id, {
+      onDelete: "set null",
+    }),
+    wishTitle: varchar("wish_title", { length: 200 }).notNull(),
+    changedFields: text("changed_fields").array().notNull(),
+    addedGroupIds: uuid("added_group_ids")
+      .array()
+      .default(sql`ARRAY[]::uuid[]`)
+      .notNull(),
+    removedGroupIds: uuid("removed_group_ids")
+      .array()
+      .default(sql`ARRAY[]::uuid[]`)
+      .notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("activities_recipient_created_at_index").on(
+      table.recipientId,
+      table.createdAt,
+    ),
+    index("activities_wish_id_index").on(table.wishId),
+    check(
+      "activities_wish_title_length_check",
+      sql`char_length(btrim(${table.wishTitle})) between 1 and 200`,
+    ),
+    check(
+      "activities_changed_fields_check",
+      sql`${table.changedFields} <@ ARRAY['title', 'description', 'link', 'priceText']::text[]`,
+    ),
+    check(
+      "activities_change_data_check",
+      sql`cardinality(${table.changedFields}) > 0 or cardinality(${table.addedGroupIds}) > 0 or cardinality(${table.removedGroupIds}) > 0`,
     ),
   ],
 );

@@ -200,6 +200,9 @@ export function GroupView({ groupId }: { groupId: string }) {
         <Link className="button-link secondary" href="/wishlist">
           Meine Wunschliste
         </Link>
+        <Link className="button-link secondary" href="/activity">
+          Activity
+        </Link>
       </div>
 
       {loading ? (

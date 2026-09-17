@@ -276,6 +276,39 @@ describe("wish service", () => {
     assert.equal(noOp.wish.updatedAt.getTime(), now.getTime());
   });
 
+  it("detects title, link, and price changes alongside the existing description diff", async () => {
+    const repository = new MemoryWishRepository();
+    const service = createWishService(repository);
+    const wish = await service.createWish({
+      ownerId: "alice",
+      title: "Alte Bezeichnung",
+      description: "Alte Notiz",
+      link: "https://example.test/old",
+      priceText: "10 €",
+      now,
+    });
+
+    const result = await service.updateWish({
+      wishId: wish.id,
+      ownerId: "alice",
+      title: "Neue Bezeichnung",
+      description: "Neue Notiz",
+      link: "https://example.test/new",
+      priceText: "20 €",
+      now: new Date(now.getTime() + 1),
+    });
+
+    assert.deepEqual(result.changes.changedFields, [
+      "title",
+      "description",
+      "link",
+      "priceText",
+    ]);
+    assert.deepEqual(result.changes.addedGroupIds, []);
+    assert.deepEqual(result.changes.removedGroupIds, []);
+    assert.equal(result.changes.isNoop, false);
+  });
+
   it("lists private and grouped wishes together and protects deletion", async () => {
     const repository = new MemoryWishRepository();
     repository.addGroup("group-a", ["alice"]);

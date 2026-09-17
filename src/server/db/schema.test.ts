@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
+  activities,
+  activityEventType,
   groupInvites,
   groupMemberships,
   groups,
@@ -190,6 +192,40 @@ describe("auth schema security constraints", () => {
       checkNames(wishTakeovers).includes("wish_takeovers_updated_at_check"),
     );
     assert.equal(config.foreignKeys.length, 2);
+  });
+
+  it("models recipient-scoped wish-change activity with deletion-safe wish links", () => {
+    const config = getTableConfig(activities);
+    const columns = config.columns.map((column) => column.name);
+    const eventType = config.columns.find(
+      (column) => column.name === "event_type",
+    );
+    const wishId = config.columns.find((column) => column.name === "wish_id");
+
+    assert.deepEqual(columns, [
+      "id",
+      "recipient_id",
+      "event_type",
+      "wish_id",
+      "wish_title",
+      "changed_fields",
+      "added_group_ids",
+      "removed_group_ids",
+      "created_at",
+    ]);
+    assert.deepEqual(eventType?.enumValues, ["wish_changed"]);
+    assert.equal(activityEventType.enumValues[0], "wish_changed");
+    assert.equal(wishId?.notNull, false);
+    assert.equal(config.foreignKeys.length, 2);
+    assert.ok(
+      indexNames(activities).includes(
+        "activities_recipient_created_at_index",
+      ),
+    );
+    assert.ok(indexNames(activities).includes("activities_wish_id_index"));
+    assert.ok(
+      checkNames(activities).includes("activities_change_data_check"),
+    );
   });
 
   it("models ceremony expiry, consumption, bounded attempts, and binding", () => {

@@ -1,8 +1,16 @@
 import "server-only";
 
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { createWishChangedActivity } from "../activity/activity-service";
+import { insertWishChangedActivity } from "../activity/drizzle-activity-repository";
 import { db } from "../db/client";
-import { groupMemberships, groups, wishGroups, wishes } from "../db/schema";
+import {
+  groupMemberships,
+  groups,
+  wishGroups,
+  wishes,
+  wishTakeovers,
+} from "../db/schema";
 import type {
   CreateWishResult,
   UpdateWishResult,
@@ -327,6 +335,30 @@ export const drizzleWishRepository: WishRepository = {
           .onConflictDoNothing({
             target: [wishGroups.wishId, wishGroups.groupId],
           });
+      }
+
+      // The wish row is locked above and takeover mutations use the same row
+      // lock. The snapshot therefore identifies the one current taker for
+      // this committed wish change without exposing takeover data to the
+      // owner-facing result.
+      const [activeTakeover] = await tx
+        .select({
+          takerId: wishTakeovers.takerId,
+          status: wishTakeovers.status,
+        })
+        .from(wishTakeovers)
+        .where(eq(wishTakeovers.wishId, input.wishId))
+        .for("update")
+        .limit(1);
+      if (activeTakeover) {
+        const activity = createWishChangedActivity({
+          activeTakeover,
+          wishId: input.wishId,
+          wishTitle: updated.title,
+          changes,
+          createdAt: input.now,
+        });
+        if (activity) await insertWishChangedActivity(tx, activity);
       }
 
       const finalGroups = await tx
