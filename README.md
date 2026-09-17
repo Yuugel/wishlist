@@ -12,10 +12,10 @@ PWA-Basis.
 
 ## Lokal starten
 
-1. Abhängigkeiten installieren:
+1. Abhängigkeiten reproduzierbar installieren:
 
    ```bash
-   npm install
+   npm ci
    ```
 
 2. Umgebungsvariablen anlegen. `.env.example` kopieren und den Platzhalter in
@@ -58,8 +58,16 @@ npm start
 ```
 
 `next.config.ts` enthält bewusst keine provider-spezifischen Einstellungen.
-Vercel erkennt die Next.js-Anwendung automatisch; `DATABASE_URL` wird dort als
-verschlüsselte Environment Variable hinterlegt.
+Vercel erkennt die Next.js-Anwendung automatisch. Alle API-Routen deklarieren
+für Auth, Datenbank und Health explizit die Node.js-Runtime. Die vollständigen
+Environment-Scope-, Neon-, Migrations-, WebAuthn- und Rollback-Schritte stehen
+im [Deployment-Runbook](docs/deployment.md). Insbesondere werden
+`DATABASE_URL` und Recovery-Pepper nur als Provider-Secrets hinterlegt.
+
+Solange keine dauerhaft kontrollierte Produktionsdomain mit exakter RP-ID und
+Origin festgelegt ist, ist Production-Passkey-Nutzung nicht freigegeben.
+Vercel-Previews bleiben standardmäßig fail-closed und dürfen keine zufällige
+Deployment-URL als dauerhafte RP-ID verwenden.
 
 ## Drizzle und Migrationen
 

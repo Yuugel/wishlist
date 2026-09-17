@@ -6,9 +6,18 @@ export type WebAuthnConfig = {
   origin: string;
 };
 
+type WebAuthnEnvironment = Readonly<{
+  NODE_ENV?: string;
+  VERCEL_ENV?: string;
+  WEBAUTHN_ORIGIN?: string;
+  WEBAUTHN_PREVIEW_ENABLED?: string;
+  WEBAUTHN_RP_ID?: string;
+  WEBAUTHN_RP_NAME?: string;
+}>;
+
 let cachedConfig: WebAuthnConfig | undefined;
 
-function parseOrigin(value: string): URL {
+function parseOrigin(value: string, production: boolean): URL {
   let url: URL;
   try {
     url = new URL(value);
@@ -16,24 +25,45 @@ function parseOrigin(value: string): URL {
     throw new Error("WEBAUTHN_ORIGIN must be an absolute URL");
   }
 
-  if (url.origin !== value || (url.protocol !== "https:" && url.hostname !== "localhost")) {
+  const developmentLocalhost =
+    !production && url.protocol === "http:" && url.hostname === "localhost";
+  if (
+    url.origin !== value ||
+    (url.protocol !== "https:" && !developmentLocalhost) ||
+    (production && url.hostname === "localhost")
+  ) {
     throw new Error(
-      "WEBAUTHN_ORIGIN must be an HTTPS origin (http://localhost is allowed for development)",
+      "WEBAUTHN_ORIGIN must be an exact HTTPS origin (http://localhost is allowed only in development)",
     );
   }
 
   return url;
 }
 
-export function getWebAuthnConfig(): WebAuthnConfig {
-  if (cachedConfig) return cachedConfig;
+/**
+ * Resolve only explicit production settings. In particular, never derive a
+ * relying party from request headers or a provider-generated deployment URL.
+ */
+export function resolveWebAuthnConfig(
+  environment: WebAuthnEnvironment,
+): WebAuthnConfig {
+  const production = environment.NODE_ENV === "production";
 
-  const production = process.env.NODE_ENV === "production";
-  const originValue = process.env.WEBAUTHN_ORIGIN ??
+  if (
+    production &&
+    environment.VERCEL_ENV === "preview" &&
+    environment.WEBAUTHN_PREVIEW_ENABLED !== "true"
+  ) {
+    throw new Error(
+      "WebAuthn is disabled for Vercel Preview deployments unless WEBAUTHN_PREVIEW_ENABLED=true is set explicitly",
+    );
+  }
+
+  const originValue = environment.WEBAUTHN_ORIGIN ??
     (production ? undefined : "http://localhost:3000");
-  const rpID = process.env.WEBAUTHN_RP_ID ??
+  const rpID = environment.WEBAUTHN_RP_ID ??
     (production ? undefined : "localhost");
-  const rpName = process.env.WEBAUTHN_RP_NAME?.trim() || "Wishlist";
+  const rpName = environment.WEBAUTHN_RP_NAME?.trim() || "Wishlist";
 
   if (!originValue || !rpID) {
     throw new Error(
@@ -41,16 +71,22 @@ export function getWebAuthnConfig(): WebAuthnConfig {
     );
   }
 
-  const origin = parseOrigin(originValue);
+  const origin = parseOrigin(originValue, production);
   if (
     rpID.includes(":") ||
     rpID.includes("/") ||
     rpID !== rpID.toLowerCase() ||
+    (production && rpID === "localhost") ||
     (origin.hostname !== rpID && !origin.hostname.endsWith(`.${rpID}`))
   ) {
     throw new Error("WEBAUTHN_RP_ID must be a valid registrable suffix of the origin hostname");
   }
 
-  cachedConfig = { rpID, rpName, origin: origin.origin };
+  return { rpID, rpName, origin: origin.origin };
+}
+
+export function getWebAuthnConfig(): WebAuthnConfig {
+  if (cachedConfig) return cachedConfig;
+  cachedConfig = resolveWebAuthnConfig(process.env);
   return cachedConfig;
 }
