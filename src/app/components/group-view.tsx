@@ -16,8 +16,7 @@ type ApiGroup = {
   members: ApiMember[];
 };
 
-type ApiWish = {
-  view: "owner" | "viewer";
+type ApiWishFields = {
   id: string;
   title: string;
   description: string | null;
@@ -26,6 +25,20 @@ type ApiWish = {
   createdAt: string;
   updatedAt: string;
 };
+
+type ViewerTakeoverStatus =
+  | "available"
+  | "reserved_by_you"
+  | "reserved"
+  | "purchased_by_you"
+  | "purchased";
+
+type ApiWish =
+  | (ApiWishFields & { view: "owner" })
+  | (ApiWishFields & {
+      view: "viewer";
+      takeoverStatus: ViewerTakeoverStatus;
+    });
 
 type ApiMemberWishes = {
   member: ApiMember;
@@ -40,12 +53,29 @@ type ApiGroupResponse = ApiError & {
   group?: ApiGroup;
 };
 
+function takeoverLabel(status: ViewerTakeoverStatus): string | null {
+  switch (status) {
+    case "available":
+      return null;
+    case "reserved_by_you":
+      return "Von dir übernommen";
+    case "reserved":
+      return "Reserviert";
+    case "purchased_by_you":
+      return "Von dir gekauft";
+    case "purchased":
+      return "Gekauft";
+  }
+}
+
 export function GroupView({ groupId }: { groupId: string }) {
   const router = useRouter();
   const [group, setGroup] = useState<ApiGroup>();
   const [memberWishes, setMemberWishes] = useState<ApiMemberWishes[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string>();
+  const [actionMessage, setActionMessage] = useState<string>();
+  const [busyWishId, setBusyWishId] = useState<string>();
 
   useEffect(() => {
     let cancelled = false;
@@ -108,6 +138,59 @@ export function GroupView({ groupId }: { groupId: string }) {
     };
   }, [groupId, router]);
 
+  async function mutateTakeover(
+    wishId: string,
+    method: "POST" | "PATCH" | "DELETE",
+    status?: "reserved" | "purchased",
+  ) {
+    setBusyWishId(wishId);
+    setActionMessage(undefined);
+    try {
+      const response = await fetch(
+        `/api/wishes/${encodeURIComponent(wishId)}/takeover`,
+        {
+          method,
+          credentials: "same-origin",
+          ...(status
+            ? {
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status }),
+              }
+            : {}),
+        },
+      );
+      const data = (await response.json().catch(() => ({}))) as ApiError & {
+        takeoverStatus?: ViewerTakeoverStatus;
+      };
+      if (response.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      if (!response.ok || !data.takeoverStatus) {
+        throw new Error(data.message ?? "Der Status konnte nicht geändert werden.");
+      }
+
+      setMemberWishes((members) =>
+        members.map((entry) => ({
+          ...entry,
+          wishes: entry.wishes.map((wish) =>
+            wish.id === wishId && wish.view === "viewer"
+              ? { ...wish, takeoverStatus: data.takeoverStatus! }
+              : wish,
+          ),
+        })),
+      );
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error
+          ? error.message
+          : "Der Status konnte nicht geändert werden.",
+      );
+    } finally {
+      setBusyWishId(undefined);
+    }
+  }
+
   return (
     <div className="stack">
       <div className="actions">
@@ -133,6 +216,10 @@ export function GroupView({ groupId }: { groupId: string }) {
             </p>
           </div>
 
+          {actionMessage && (
+            <p className="notice" role="alert">{actionMessage}</p>
+          )}
+
           <section className="group-section" aria-labelledby="members-heading">
             <h3 id="members-heading">Mitglieder</h3>
             <ul className="member-list compact-member-list">
@@ -152,27 +239,84 @@ export function GroupView({ groupId }: { groupId: string }) {
                     <p className="hint">Keine sichtbaren Wünsche.</p>
                   ) : (
                     <div className="wish-list nested-wish-list">
-                      {wishes.map((wish) => (
-                        <div className="wish-item" key={wish.id}>
-                          <div className="wish-item-heading">
-                            <h5>{wish.title}</h5>
-                            {wish.view === "owner" && (
-                              <span className="wish-audience">Dein Wunsch</span>
+                      {wishes.map((wish) => {
+                        const busy = busyWishId === wish.id;
+                        const status = wish.view === "viewer"
+                          ? wish.takeoverStatus
+                          : undefined;
+                        const label = status ? takeoverLabel(status) : null;
+
+                        return (
+                          <div className="wish-item" key={wish.id}>
+                            <div className="wish-item-heading">
+                              <h5>{wish.title}</h5>
+                              {wish.view === "owner" ? (
+                                <span className="wish-audience">Dein Wunsch</span>
+                              ) : label ? (
+                                <span className="wish-audience">{label}</span>
+                              ) : null}
+                            </div>
+                            {wish.description && <p>{wish.description}</p>}
+                            {wish.link && (
+                              <p>
+                                <a href={wish.link} target="_blank" rel="noreferrer">
+                                  Link öffnen
+                                </a>
+                              </p>
+                            )}
+                            {wish.priceText && (
+                              <p className="wish-price">{wish.priceText}</p>
+                            )}
+
+                            {status === "available" && (
+                              <div className="actions compact-actions">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void mutateTakeover(wish.id, "POST")}
+                                >
+                                  Übernehmen
+                                </button>
+                              </div>
+                            )}
+                            {status === "reserved_by_you" && (
+                              <div className="actions compact-actions">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void mutateTakeover(wish.id, "PATCH", "purchased")
+                                  }
+                                >
+                                  Gekauft
+                                </button>
+                                <button
+                                  className="secondary"
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => void mutateTakeover(wish.id, "DELETE")}
+                                >
+                                  Freigeben
+                                </button>
+                              </div>
+                            )}
+                            {status === "purchased_by_you" && (
+                              <div className="actions compact-actions">
+                                <button
+                                  className="secondary"
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    void mutateTakeover(wish.id, "PATCH", "reserved")
+                                  }
+                                >
+                                  Zurück auf Reserviert
+                                </button>
+                              </div>
                             )}
                           </div>
-                          {wish.description && <p>{wish.description}</p>}
-                          {wish.link && (
-                            <p>
-                              <a href={wish.link} target="_blank" rel="noreferrer">
-                                Link öffnen
-                              </a>
-                            </p>
-                          )}
-                          {wish.priceText && (
-                            <p className="wish-price">{wish.priceText}</p>
-                          )}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </article>

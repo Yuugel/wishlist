@@ -2,7 +2,12 @@ import "server-only";
 
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "../db/client";
-import { groupMemberships, wishGroups, wishes } from "../db/schema";
+import {
+  groupMemberships,
+  wishGroups,
+  wishes,
+  wishTakeovers,
+} from "../db/schema";
 import { wishColumns } from "../wishes/drizzle-wish-repository";
 import type { VisibilityRepository } from "./visibility-repository";
 
@@ -31,9 +36,12 @@ export const drizzleVisibilityRepository: VisibilityRepository = {
       .select({
         ...wishColumns,
         groupId: wishGroups.groupId,
+        takeoverStatus: wishTakeovers.status,
+        takeoverTakerId: wishTakeovers.takerId,
       })
       .from(wishes)
       .innerJoin(wishGroups, eq(wishGroups.wishId, wishes.id))
+      .leftJoin(wishTakeovers, eq(wishTakeovers.wishId, wishes.id))
       .where(eq(wishGroups.groupId, groupId))
       .orderBy(desc(wishes.createdAt), asc(wishes.id));
   },

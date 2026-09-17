@@ -30,10 +30,16 @@ describe("wish view boundaries", () => {
       updatedAt: now,
     };
 
-    const owner = toOwnerWishView(record);
-    const groupOwner = toGroupOwnerWishView(record);
-    const viewer = toGroupViewerWishView(record);
+    const secretBearingRecord = {
+      ...record,
+      takeoverStatus: "purchased" as const,
+      takeoverTakerId: "bob",
+    };
+    const owner = toOwnerWishView(secretBearingRecord);
+    const groupOwner = toGroupOwnerWishView(secretBearingRecord);
+    const viewer = toGroupViewerWishView(secretBearingRecord, "purchased");
     const serializedOwner = serializeOwnerWishView(owner);
+    const serializedGroupOwner = serializeGroupWishView(groupOwner);
     const serializedViewer = serializeGroupWishView(viewer);
 
     assert.equal(owner.audience, "owner");
@@ -43,11 +49,21 @@ describe("wish view boundaries", () => {
     assert.equal("ownerId" in viewer, false);
     assert.equal("reservation" in owner, false);
     assert.equal("reservation" in viewer, false);
+    assert.equal("takeoverStatus" in owner, false);
+    assert.equal("takeoverTakerId" in owner, false);
+    assert.equal("takeoverStatus" in groupOwner, false);
     assert.deepEqual(serializedOwner.groups, [
       { id: "group-a", name: "A", createdAt: now.toISOString() },
     ]);
     assert.equal(serializedOwner.ownerId, "alice");
     assert.equal("groups" in serializedViewer, false);
     assert.equal("reservation" in serializedViewer, false);
+    assert.equal("takeoverTakerId" in serializedViewer, false);
+    assert.equal("takeoverStatus" in serializedViewer, true);
+    if ("takeoverStatus" in serializedViewer) {
+      assert.equal(serializedViewer.takeoverStatus, "purchased");
+    }
+    assert.equal("takeoverStatus" in serializedOwner, false);
+    assert.equal("takeoverStatus" in serializedGroupOwner, false);
   });
 });

@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { GroupSummary } from "../groups/group-types";
+import type { ViewerTakeoverStatus } from "../takeovers/takeover-repository";
 import type { WishRecord, WishVisibilityRecord } from "./wish-repository";
 
 export type WishSafeViewFields = {
@@ -36,6 +37,7 @@ export type GroupOwnerWishView = WishSafeViewFields & {
  */
 export type GroupViewerWishView = WishSafeViewFields & {
   audience: "viewer";
+  takeoverStatus: ViewerTakeoverStatus;
 };
 
 export type GroupWishView = GroupOwnerWishView | GroupViewerWishView;
@@ -69,8 +71,9 @@ export function toGroupOwnerWishView(
 
 export function toGroupViewerWishView(
   wish: WishVisibilityRecord,
+  takeoverStatus: ViewerTakeoverStatus,
 ): GroupViewerWishView {
-  return { ...safeFields(wish), audience: "viewer" };
+  return { ...safeFields(wish), audience: "viewer", takeoverStatus };
 }
 
 function serializeSafeFields(view: WishSafeViewFields) {
@@ -103,8 +106,13 @@ export function serializeOwnerWishView(view: OwnerWishView) {
 }
 
 export function serializeGroupWishView(view: GroupWishView) {
+  const safe = serializeSafeFields(view);
+  if (view.audience === "owner") {
+    return { view: view.audience, ...safe };
+  }
   return {
     view: view.audience,
-    ...serializeSafeFields(view),
+    ...safe,
+    takeoverStatus: view.takeoverStatus,
   };
 }

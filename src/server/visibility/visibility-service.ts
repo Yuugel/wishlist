@@ -1,6 +1,7 @@
 import "server-only";
 
 import { GroupServiceError } from "../groups/group-service";
+import { toViewerTakeoverStatus } from "../takeovers/takeover-service";
 import {
   toGroupOwnerWishView,
   toGroupViewerWishView,
@@ -86,7 +87,13 @@ export function createVisibilityService(repository: VisibilityRepository) {
         memberWishes.push(
           record.ownerId === authorized.userId
             ? toGroupOwnerWishView(record)
-            : toGroupViewerWishView(record),
+            : toGroupViewerWishView(
+                record,
+                toViewerTakeoverStatus(
+                  record.takeoverStatus,
+                  record.takeoverTakerId === authorized.userId,
+                ),
+              ),
         );
       }
 

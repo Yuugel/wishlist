@@ -11,6 +11,7 @@ import {
   webauthnCeremonies,
   wishGroups,
   wishes,
+  wishTakeovers,
   webauthnCredentials,
 } from "./schema";
 
@@ -161,6 +162,34 @@ describe("auth schema security constraints", () => {
     assert.ok(checkNames(wishes).includes("wishes_description_length_check"));
     assert.ok(checkNames(wishes).includes("wishes_link_length_check"));
     assert.ok(checkNames(wishes).includes("wishes_price_text_length_check"));
+  });
+
+  it("enforces one global active takeover per wish with safe status timestamps", () => {
+    const config = getTableConfig(wishTakeovers);
+    const columns = config.columns.map((column) => column.name);
+    const wishId = config.columns.find((column) => column.name === "wish_id");
+    const status = config.columns.find((column) => column.name === "status");
+
+    assert.deepEqual(columns, [
+      "wish_id",
+      "taker_id",
+      "status",
+      "purchased_at",
+      "created_at",
+      "updated_at",
+    ]);
+    assert.equal(wishId?.primary, true);
+    assert.deepEqual(status?.enumValues, ["reserved", "purchased"]);
+    assert.ok(indexNames(wishTakeovers).includes("wish_takeovers_taker_id_index"));
+    assert.ok(
+      checkNames(wishTakeovers).includes(
+        "wish_takeovers_status_timestamp_check",
+      ),
+    );
+    assert.ok(
+      checkNames(wishTakeovers).includes("wish_takeovers_updated_at_check"),
+    );
+    assert.equal(config.foreignKeys.length, 2);
   });
 
   it("models ceremony expiry, consumption, bounded attempts, and binding", () => {

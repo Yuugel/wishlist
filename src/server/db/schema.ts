@@ -48,6 +48,10 @@ export const recoveryCodeStatus = pgEnum("recovery_code_status", [
   "consumed",
   "revoked",
 ]);
+export const wishTakeoverStatus = pgEnum("wish_takeover_status", [
+  "reserved",
+  "purchased",
+]);
 
 export const users = pgTable(
   "users",
@@ -147,6 +151,36 @@ export const wishGroups = pgTable(
       columns: [table.wishId, table.groupId],
     }),
     index("wish_groups_group_id_index").on(table.groupId),
+  ],
+);
+
+export const wishTakeovers = pgTable(
+  "wish_takeovers",
+  {
+    wishId: uuid("wish_id")
+      .primaryKey()
+      .references(() => wishes.id, { onDelete: "cascade" }),
+    takerId: uuid("taker_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: wishTakeoverStatus("status").default("reserved").notNull(),
+    purchasedAt: timestamp("purchased_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index("wish_takeovers_taker_id_index").on(table.takerId),
+    check(
+      "wish_takeovers_status_timestamp_check",
+      sql`(${table.status} = 'reserved' and ${table.purchasedAt} is null) or (${table.status} = 'purchased' and ${table.purchasedAt} is not null)`,
+    ),
+    check(
+      "wish_takeovers_updated_at_check",
+      sql`${table.updatedAt} >= ${table.createdAt}`,
+    ),
+    check(
+      "wish_takeovers_purchased_at_check",
+      sql`${table.purchasedAt} is null or ${table.purchasedAt} >= ${table.createdAt}`,
+    ),
   ],
 );
 

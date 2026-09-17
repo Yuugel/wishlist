@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { AuthError } from "@/server/auth/auth-error";
 import { authErrorResponse } from "@/server/auth/route-response";
+import { TakeoverServiceError } from "@/server/takeovers/takeover-service";
 import { WishServiceError } from "@/server/wishes/wish-service";
 import {
   serializeOwnerWishView,
@@ -13,6 +14,11 @@ export const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 export async function getWishService() {
   const serviceModule = await import("@/server/wishes/service");
   return serviceModule.wishService;
+}
+
+export async function getTakeoverService() {
+  const serviceModule = await import("@/server/takeovers/service");
+  return serviceModule.takeoverService;
 }
 
 /** Reject an explicitly cross-origin mutation while allowing non-browser API clients. */
@@ -61,6 +67,23 @@ export function serializeChanges(changes: WishChangeSet) {
     removedGroupIds: changes.removedGroupIds,
     isNoop: changes.isNoop,
   };
+}
+
+export function takeoverErrorResponse(error: unknown): NextResponse {
+  if (error instanceof AuthError) return authErrorResponse(error);
+
+  if (error instanceof TakeoverServiceError) {
+    const status = error.code === "takeover_access_denied" ? 404 : 409;
+    return NextResponse.json(
+      { error: error.code, message: error.message },
+      { status, headers: NO_STORE_HEADERS },
+    );
+  }
+
+  return NextResponse.json(
+    { error: "server_error" },
+    { status: 500, headers: NO_STORE_HEADERS },
+  );
 }
 
 export function wishErrorResponse(error: unknown): NextResponse {
