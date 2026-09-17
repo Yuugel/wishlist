@@ -8,6 +8,7 @@ import {
 } from "@simplewebauthn/browser";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { webAuthnErrorMessage } from "./webauthn-error";
 
 type Ceremony<T> = { ceremonyId: string; options: T };
 type ApiError = { message?: string };
@@ -28,17 +29,7 @@ async function requestJson<T>(path: string, body: unknown): Promise<T> {
 }
 
 function browserMessage(error: unknown): string {
-  if (error instanceof DOMException) {
-    if (error.name === "NotAllowedError") {
-      return "Der Passkey-Vorgang wurde abgebrochen oder ist abgelaufen.";
-    }
-    if (error.name === "InvalidStateError") {
-      return "Dieser Passkey ist für das Konto bereits registriert.";
-    }
-    return "Der Browser konnte den Passkey-Vorgang nicht abschließen.";
-  }
-  if (error instanceof Error) return error.message;
-  return "Der Passkey-Vorgang ist fehlgeschlagen.";
+  return webAuthnErrorMessage(error);
 }
 
 function ensureWebAuthn(): void {
@@ -67,7 +58,69 @@ function RecoveryCodeNotice(input: {
   );
 }
 
-export function SignupForm({ returnTo }: { returnTo?: string }) {
+export function PasswordSignupForm({ returnTo }: { returnTo?: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string>();
+  const [recoveryCode, setRecoveryCode] = useState<string>();
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(undefined);
+    const form = new FormData(event.currentTarget);
+    try {
+      const result = await requestJson<RecoveryResult>(
+        "/api/auth/password/signup",
+        {
+          displayName: form.get("displayName"),
+          email: form.get("email"),
+          password: form.get("password"),
+        },
+      );
+      setRecoveryCode(result.recoveryCode);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Die Registrierung ist fehlgeschlagen.");
+      setBusy(false);
+    }
+  }
+
+  if (recoveryCode) {
+    return (
+      <RecoveryCodeNotice
+        recoveryCode={recoveryCode}
+        onContinue={() => {
+          setRecoveryCode(undefined);
+          router.replace(returnTo ?? "/account");
+        }}
+      />
+    );
+  }
+
+  return (
+    <form className="auth-form" onSubmit={submit}>
+      <label>
+        Anzeigename
+        <input name="displayName" required maxLength={200} autoComplete="name" placeholder="Wie dürfen wir dich nennen?" />
+      </label>
+      <label>
+        E-Mail
+        <input name="email" type="email" required maxLength={320} autoComplete="email" placeholder="du@beispiel.de" />
+      </label>
+      <label>
+        Passwort
+        <input name="password" type="password" required minLength={12} maxLength={128} autoComplete="new-password" />
+      </label>
+      <p className="hint">Mindestens 12 Zeichen. Verwende ein einzigartiges Passwort.</p>
+      <button type="submit" disabled={busy}>
+        {busy ? "Konto wird erstellt …" : "Mit E-Mail und Passwort registrieren"}
+      </button>
+      {message && <p className="notice notice-error" role="alert">{message}</p>}
+    </form>
+  );
+}
+
+export function PasskeySignupForm({ returnTo }: { returnTo?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -239,7 +292,47 @@ export function RecoveryForm() {
   );
 }
 
-export function LoginButton({ returnTo }: { returnTo?: string }) {
+export function PasswordLoginForm({ returnTo }: { returnTo?: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string>();
+
+  async function login(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(undefined);
+    const form = new FormData(event.currentTarget);
+    try {
+      await requestJson("/api/auth/password/login", {
+        email: form.get("email"),
+        password: form.get("password"),
+      });
+      router.push(returnTo ?? "/account");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Die Anmeldung ist fehlgeschlagen.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="auth-form" onSubmit={login}>
+      <label>
+        E-Mail
+        <input name="email" type="email" required maxLength={320} autoComplete="email" placeholder="du@beispiel.de" />
+      </label>
+      <label>
+        Passwort
+        <input name="password" type="password" required maxLength={128} autoComplete="current-password" />
+      </label>
+      <button type="submit" disabled={busy}>
+        {busy ? "Anmeldung wird geprüft …" : "Anmelden"}
+      </button>
+      {message && <p className="notice notice-error" role="alert">{message}</p>}
+    </form>
+  );
+}
+
+export function PasskeyLoginButton({ returnTo }: { returnTo?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -277,6 +370,8 @@ export function LoginButton({ returnTo }: { returnTo?: string }) {
 type AccountSummary = {
   authenticated: true;
   displayName: string;
+  email: string | null;
+  hasPassword: boolean;
   passkeyCount: number;
 };
 
@@ -324,6 +419,26 @@ export function AccountPanel() {
     }
   }
 
+  async function addPassword(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(undefined);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    try {
+      await requestJson("/api/auth/password", {
+        password: form.get("password"),
+      });
+      formElement.reset();
+      setAccount((current) => current ? { ...current, hasPassword: true } : current);
+      setMessage("Das Passwort wurde sicher gespeichert.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Das Passwort konnte nicht gespeichert werden.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function logout() {
     setBusy(true);
     setMessage(undefined);
@@ -345,7 +460,11 @@ export function AccountPanel() {
             <div className="profile-copy">
               <p className="section-kicker">Angemeldet als</p>
               <h2>{account.displayName}</h2>
-              <span className="security-badge">Passkey-geschützt</span>
+              <span className="security-badge">
+                {account.hasPassword && account.passkeyCount > 0
+                  ? "Passwort & Passkey"
+                  : account.hasPassword ? "Passwort eingerichtet" : "Passkey-geschützt"}
+              </span>
             </div>
           </>
         ) : (
@@ -353,9 +472,10 @@ export function AccountPanel() {
         )}
       </section>
 
-      {message ? <p className={`notice ${message.includes("gespeichert") ? "notice-success" : "notice-error"}`} role="status">{message}</p> : null}
+      <div className="account-settings">
+        {message ? <p className={`notice ${message.includes("gespeichert") ? "notice-success" : "notice-error"}`} role="status">{message}</p> : null}
 
-      <section className="settings-card" aria-labelledby="passkeys-heading">
+        <section className="settings-card" aria-labelledby="passkeys-heading">
         <div className="settings-icon" aria-hidden="true">⌁</div>
         <div className="settings-copy">
           <div className="settings-heading-row">
@@ -370,15 +490,41 @@ export function AccountPanel() {
         </div>
       </section>
 
-      <section className="settings-card quiet-settings" aria-labelledby="session-heading">
-        <div className="settings-icon" aria-hidden="true">→</div>
+      <section className="settings-card password-settings" aria-labelledby="password-heading">
+        <div className="settings-icon" aria-hidden="true">••</div>
         <div className="settings-copy">
-          <p className="section-kicker">Dieses Gerät</p>
-          <h3 id="session-heading">Aktuelle Sitzung</h3>
-          <p>Beende die Anmeldung auf diesem Gerät, wenn du es nicht mehr verwendest.</p>
-          <button className="secondary" type="button" onClick={logout} disabled={busy}>Abmelden</button>
+          <p className="section-kicker">Alternative Anmeldung</p>
+          <h3 id="password-heading">E-Mail und Passwort</h3>
+          {account?.hasPassword ? (
+            <p>Für dieses Konto ist ein Passwort als zusätzlicher Login-Weg eingerichtet.</p>
+          ) : account?.email ? (
+            <form className="settings-form" onSubmit={addPassword}>
+              <p>Richte für <strong>{account.email}</strong> ein Passwort als zusätzlichen Login-Weg ein.</p>
+              <label>
+                Neues Passwort
+                <input name="password" type="password" required minLength={12} maxLength={128} autoComplete="new-password" />
+              </label>
+              <p className="hint">Mindestens 12 Zeichen. Dies ist nur kurz nach einer Anmeldung möglich.</p>
+              <button type="submit" disabled={busy}>Passwort sicher einrichten</button>
+            </form>
+          ) : account ? (
+            <p>Dieses Konto hat keine hinterlegte E-Mail-Adresse. Deshalb kann hier kein Passwort eingerichtet werden.</p>
+          ) : (
+            <p>Konto wird geladen …</p>
+          )}
         </div>
       </section>
+
+        <section className="settings-card quiet-settings" aria-labelledby="session-heading">
+          <div className="settings-icon" aria-hidden="true">→</div>
+          <div className="settings-copy">
+            <p className="section-kicker">Dieses Gerät</p>
+            <h3 id="session-heading">Aktuelle Sitzung</h3>
+            <p>Beende die Anmeldung auf diesem Gerät, wenn du es nicht mehr verwendest.</p>
+            <button className="secondary" type="button" onClick={logout} disabled={busy}>Abmelden</button>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

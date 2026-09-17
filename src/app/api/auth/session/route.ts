@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireSession } from "@/server/auth/current-session";
 import { authErrorResponse } from "@/server/auth/route-response";
 import { db } from "@/server/db/client";
-import { users, webauthnCredentials } from "@/server/db/schema";
+import {
+  passwordCredentials,
+  users,
+  webauthnCredentials,
+} from "@/server/db/schema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,8 +17,16 @@ export async function GET(request: NextRequest) {
     const session = await requireSession(request);
     const [[user], [credentials]] = await Promise.all([
       db
-        .select({ displayName: users.displayName })
+        .select({
+          displayName: users.displayName,
+          email: users.email,
+          passwordUserId: passwordCredentials.userId,
+        })
         .from(users)
+        .leftJoin(
+          passwordCredentials,
+          eq(passwordCredentials.userId, users.id),
+        )
         .where(and(eq(users.id, session.userId), eq(users.status, "active")))
         .limit(1),
       db
@@ -32,6 +44,8 @@ export async function GET(request: NextRequest) {
       {
         authenticated: true,
         displayName: user.displayName,
+        email: user.email,
+        hasPassword: user.passwordUserId !== null,
         passkeyCount: credentials?.count ?? 0,
       },
       { headers: { "Cache-Control": "no-store" } },

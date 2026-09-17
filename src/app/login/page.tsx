@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { AuthShell } from "../components/app-shell";
-import { LoginButton } from "../components/passkey-flows";
+import {
+  PasskeyLoginButton,
+  PasswordLoginForm,
+} from "../components/passkey-flows";
 import { safeReturnPath } from "../safe-return-path";
 
 type LoginPageProps = {
@@ -16,7 +19,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <AuthShell
       title="Willkommen zurück"
-      description="Wähle einen Passkey auf diesem oder einem verbundenen Gerät. Ein Benutzername ist nicht nötig."
+      description="Melde dich einfach mit deiner E-Mail-Adresse und deinem Passwort an."
       footer={
         <p>
           Noch kein Konto? <Link href={signupHref}>Konto erstellen</Link>
@@ -25,7 +28,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </p>
       }
     >
-      <LoginButton returnTo={returnTo} />
+      <PasswordLoginForm returnTo={returnTo} />
+      <div className="auth-divider"><span>oder</span></div>
+      <div className="auth-alternative">
+        <p>Du nutzt bereits einen Passkey?</p>
+        <PasskeyLoginButton returnTo={returnTo} />
+      </div>
     </AuthShell>
   );
 }

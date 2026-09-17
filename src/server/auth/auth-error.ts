@@ -17,10 +17,8 @@ export function invalidRequest(): AuthError {
   );
 }
 
-export function authenticationFailed(): AuthError {
-  return new AuthError(
-    "authentication_failed",
-    401,
-    "Der Passkey konnte nicht bestätigt werden.",
-  );
+export function authenticationFailed(
+  publicMessage = "Der Passkey konnte nicht bestätigt werden.",
+): AuthError {
+  return new AuthError("authentication_failed", 401, publicMessage);
 }

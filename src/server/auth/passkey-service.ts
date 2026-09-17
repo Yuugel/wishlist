@@ -16,6 +16,7 @@ import { users, webauthnCeremonies, webauthnCredentials } from "../db/schema";
 import { getWebAuthnConfig } from "./auth-config";
 import { AuthError, authenticationFailed, invalidRequest } from "./auth-error";
 import { recordWebAuthnCeremonyFailure } from "./ceremony-service";
+import { normalizeOptionalEmail } from "./password-input";
 import {
   buildAuthenticationOptions,
   buildRegistrationOptions,
@@ -127,18 +128,7 @@ function normalizeSignupInput(value: unknown): {
     throw invalidRequest();
   }
 
-  if (input?.email === undefined || input.email === null || input.email === "") {
-    return { displayName, email: null, emailNormalized: null };
-  }
-  if (typeof input.email !== "string") throw invalidRequest();
-  const email = input.email.trim();
-  if (
-    email.length > 320 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  ) {
-    throw invalidRequest();
-  }
-  return { displayName, email, emailNormalized: email.toLowerCase() };
+  return { displayName, ...normalizeOptionalEmail(input?.email) };
 }
 
 async function loadCeremony(

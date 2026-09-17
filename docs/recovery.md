@@ -39,7 +39,8 @@ geclaimten Code endgültig; er wird niemals wieder `active`. Request-time-Cleanu
 ruft `consumeUnusableRecoveryClaims` auf. Dieselbe Funktion ist ausdrücklich als
 Hook für einen späteren periodischen Cleanup vorgesehen. Diese Fail-closed-
 Semantik verhindert die Wiederverwendung eines bereits offengelegten Codes und
-entspricht ADR 0001. Ohne verbliebenen Passkey, E-Mail- oder Support-Recovery ist
+entspricht ADR 0001. Ohne verbliebenen Passkey, bekanntes eingerichtetes
+Passwort, E-Mail-Reset (derzeit nicht vorhanden) oder Support-Recovery ist
 anschließend bewusst keine Wiederherstellung mehr möglich.
 
 ## Rate Limits

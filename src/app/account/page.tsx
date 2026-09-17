@@ -6,7 +6,7 @@ export default function AccountPage() {
     <AppShell
       eyebrow="Sicher bei dir"
       title="Dein Konto"
-      description="Verwalte deine Passkeys und deine aktuelle Anmeldung."
+      description="Verwalte deine Login-Wege und deine aktuelle Anmeldung."
     >
       <AccountPanel />
     </AppShell>

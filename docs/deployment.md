@@ -73,9 +73,12 @@ lokale ignorierte `.env.local`, niemals in Git, Ausgaben oder Tickets.
    ```
 
    `drizzle/0000` bis `0005` bauen das MVP-Schema auf. `drizzle/0006` ersetzt
-   einen Activity-Enum und Constraints und darf deshalb trotz erhaltener
-   Anwendungsdaten nicht ungeprüft gegen eine unbekannte Bestandsdatenbank
-   laufen. `npm run db:push` ist kein Production-Migrationsweg.
+   einen Activity-Enum und Constraints. `drizzle/0007` ergänzt vorwärtsgerichtet
+   die optionale Tabelle `password_credentials`; bestehende Nutzer und
+   Passkey-Credentials werden weder verändert noch migriert. Auch diese
+   Migration erst nach Backup-/Neon-Branch- und Zielprüfung anwenden. Keine
+   Migration darf ungeprüft gegen eine unbekannte Bestandsdatenbank laufen;
+   `npm run db:push` ist kein Production-Migrationsweg.
 5. Erfolgreiche Migration, Umgebung und Zeitpunkt ohne Connection String
    protokollieren. Die Migration selbst belegt Connectivity; optional danach
    über einen sicheren SQL-Client `select 1` ausführen, ohne URL auszugeben.
@@ -131,6 +134,9 @@ Anwendungsflow geprüft.
   `WEBAUTHN_ORIGIN` entsprechen; Pfade und abschließende Slashes sind ungültig.
 - **Recovery-Pepper fehlt:** Secret-JSON und aktive Version prüfen. Alte
   Pepper-Versionen behalten, solange Datenbankzeilen darauf verweisen.
+- **Passwortlogin schlägt nach Migration fehl:** Prüfen, ob `drizzle/0007`
+  angewendet wurde. Niemals Passwort, Salt oder abgeleiteten Schlüssel loggen;
+  die scrypt-Parameter stehen versionierbar in der Credential-Zeile.
 - **DB-Verbindung scheitert:** Vercel-Scope, Neon-Rolle, TLS, IP-/Projektstatus
   und Region prüfen, ohne die Connection String auszugeben.
 - **Migration scheitert:** Nicht wiederholt blind ausführen. Ziel und

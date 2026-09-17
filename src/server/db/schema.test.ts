@@ -7,6 +7,7 @@ import {
   groupInvites,
   groupMemberships,
   groups,
+  passwordCredentials,
   recoveryCodes,
   sessions,
   users,
@@ -28,7 +29,7 @@ function checkNames(table: Parameters<typeof getTableConfig>[0]): string[] {
 }
 
 describe("auth schema security constraints", () => {
-  it("keeps email nullable and has no password column", () => {
+  it("keeps email nullable and password material out of users", () => {
     const columns = getTableConfig(users).columns;
     const names = columns.map((column) => column.name);
     const email = columns.find((column) => column.name === "email");
@@ -36,6 +37,29 @@ describe("auth schema security constraints", () => {
     assert.equal(email?.notNull, false);
     assert.equal(names.some((name) => name.includes("password")), false);
     assert.ok(indexNames(users).includes("users_webauthn_user_handle_unique"));
+  });
+
+  it("stores one parameterized password derivation per user without plaintext", () => {
+    const config = getTableConfig(passwordCredentials);
+    const names = config.columns.map((column) => column.name);
+
+    assert.deepEqual(names, [
+      "user_id",
+      "algorithm",
+      "salt",
+      "derived_key",
+      "cost",
+      "block_size",
+      "parallelization",
+      "key_length",
+      "created_at",
+      "updated_at",
+    ]);
+    assert.equal(config.columns[0]?.primary, true);
+    assert.equal(names.includes("password"), false);
+    assert.ok(checkNames(passwordCredentials).includes("password_credentials_algorithm_check"));
+    assert.ok(checkNames(passwordCredentials).includes("password_credentials_salt_length_check"));
+    assert.ok(checkNames(passwordCredentials).includes("password_credentials_parameters_check"));
   });
 
   it("allows many credentials per user while credential IDs are global", () => {

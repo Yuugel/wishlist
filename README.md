@@ -40,10 +40,12 @@ PWA-Basis.
    Die Anwendung ist anschließend unter <http://localhost:3000> erreichbar.
    Der technische Health-Endpunkt liegt unter
    <http://localhost:3000/api/health> und liefert nur `{ "status": "ok" }`.
-   Unter <http://localhost:3000/signup> kann ein Konto mit Anzeigename und
-   Passkey erstellt werden; <http://localhost:3000/login> bietet den
-   username-losen Passkey-Login. Der bei der Erstellung einmalig angezeigte
-   Recovery-Code kann unter <http://localhost:3000/recover> zum sicheren Ersatz
+   Unter <http://localhost:3000/signup> kann ein Konto regulär mit Anzeigename,
+   E-Mail und Passwort oder alternativ mit Passkey erstellt werden;
+   <http://localhost:3000/login> bietet beide Login-Wege. Passwörter werden mit
+   parameterisiertem scrypt und individuellem Salt abgeleitet. Der bei der
+   Erstellung einmalig angezeigte Recovery-Code kann unter
+   <http://localhost:3000/recover> zum sicheren Ersatz
    verlorener Passkeys verwendet werden. Unter `/activity` stehen außerdem die
   persistenten In-App-Hinweise zu Änderungen an übernommenen Wünschen; die
   Liste ist nur über `GET /api/activity` mit der eigenen Session abrufbar.
@@ -91,13 +93,16 @@ npm run db:push
 
 `db:migrate` und `db:push` benötigen eine echte, nicht eingecheckte
 `DATABASE_URL`. Zugangsdaten gehören ausschließlich in `.env.local` oder die
-Hosting-Umgebung, niemals in Git.
+Hosting-Umgebung, niemals in Git. Migration `0007` ergänzt ausschließlich die
+optionale Tabelle `password_credentials`; bestehende Passkey-Konten bleiben
+unverändert. Die Migration wird vor einem Deployment bewusst nach Backup- und
+Zielprüfung ausgeführt, nicht automatisch bei Build oder Entwicklung.
 
 ## Struktur
 
 - `src/app/` – App-Router-Seiten, Layout, Manifest und Route Handler
 - `src/server/db/` – Node.js-only Datenbank-Client und Drizzle-Schema
-- `src/server/auth/` – serverseitige Passkey-, Recovery-, Ceremony- und Sessionlogik
+- `src/server/auth/` – serverseitige Passwort-, Passkey-, Recovery-, Ceremony- und Sessionlogik
 - `src/server/groups/` – server-only Gruppen-Domain, Repository und Invite-Token
 - `src/server/visibility/` – gemeinsame serverseitige Gruppen-/Wish-Sichtbarkeit
 - `src/server/activity/` – server-only Activity-Liste und Wish-Change-Events

@@ -319,6 +319,41 @@ export const groupInvites = pgTable(
   ],
 );
 
+export const passwordCredentials = pgTable(
+  "password_credentials",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    algorithm: varchar("algorithm", { length: 32 }).notNull(),
+    salt: bytea("salt").notNull(),
+    derivedKey: bytea("derived_key").notNull(),
+    cost: integer("cost").notNull(),
+    blockSize: integer("block_size").notNull(),
+    parallelization: integer("parallelization").notNull(),
+    keyLength: integer("key_length").notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "password_credentials_algorithm_check",
+      sql`${table.algorithm} = 'scrypt'`,
+    ),
+    check(
+      "password_credentials_salt_length_check",
+      sql`octet_length(${table.salt}) between 16 and 64`,
+    ),
+    check(
+      "password_credentials_derived_key_length_check",
+      sql`octet_length(${table.derivedKey}) = ${table.keyLength} and ${table.keyLength} between 16 and 64`,
+    ),
+    check(
+      "password_credentials_parameters_check",
+      sql`${table.cost} >= 16384 and ${table.blockSize} > 0 and ${table.parallelization} > 0`,
+    ),
+  ],
+);
+
 export const webauthnCredentials = pgTable(
   "webauthn_credentials",
   {
