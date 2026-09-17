@@ -1,0 +1,3 @@
+ALTER TABLE "webauthn_ceremonies" ADD COLUMN "pending_email" varchar(320);--> statement-breakpoint
+ALTER TABLE "webauthn_ceremonies" ADD COLUMN "pending_email_normalized" varchar(320);--> statement-breakpoint
+ALTER TABLE "webauthn_ceremonies" ADD CONSTRAINT "webauthn_ceremonies_pending_email_pair_check" CHECK (("webauthn_ceremonies"."pending_email" is null and "webauthn_ceremonies"."pending_email_normalized" is null) or ("webauthn_ceremonies"."pending_email" is not null and "webauthn_ceremonies"."pending_email_normalized" is not null));

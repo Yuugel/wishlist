@@ -26,7 +26,10 @@ PWA-Basis.
    ```
 
    Unter Windows PowerShell geht das zum Beispiel mit
-   `Copy-Item .env.example .env.local`.
+   `Copy-Item .env.example .env.local`. Für Passkeys sind außerdem
+   `WEBAUTHN_RP_ID` (Hostname ohne Scheme/Port) und `WEBAUTHN_ORIGIN` (exakter
+   Origin) gesetzt. Die dokumentierten localhost-Werte gelten nur lokal;
+   Produktion benötigt eine stabile HTTPS-Domain.
 
 3. Entwicklungsserver starten:
 
@@ -37,6 +40,9 @@ PWA-Basis.
    Die Anwendung ist anschließend unter <http://localhost:3000> erreichbar.
    Der technische Health-Endpunkt liegt unter
    <http://localhost:3000/api/health> und liefert nur `{ "status": "ok" }`.
+   Unter <http://localhost:3000/signup> kann ein Konto mit Anzeigename und
+   Passkey erstellt werden; <http://localhost:3000/login> bietet den
+   username-losen Passkey-Login.
 
 ## Build und Produktion lokal prüfen
 
@@ -76,11 +82,12 @@ Hosting-Umgebung, niemals in Git.
 
 - `src/app/` – App-Router-Seiten, Layout, Manifest und Route Handler
 - `src/server/db/` – Node.js-only Datenbank-Client und Drizzle-Schema
+- `src/server/auth/` – serverseitige Passkey-, Ceremony- und Sessionlogik
 - `public/` – statische Assets, derzeit das Manifest-Icon
 - `spikes/passkey-first-auth/` – isolierter Passkey-/Recovery-Spike; nicht Teil
   des Produktionscodes
 
 Das Manifest und die Metadata bereiten eine spätere Installation vor. Offline-
-Caching, Push und ein Service Worker sind in dieser Foundation bewusst nicht
-enthalten. Authentifizierung und fachliche Wishlist-Funktionen folgen in
+Caching, Push und ein Service Worker sind bewusst nicht enthalten. Der
+Recovery-Wiederherstellungsflow und fachliche Wishlist-Funktionen folgen in
 separaten Tickets.

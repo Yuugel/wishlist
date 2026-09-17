@@ -73,6 +73,9 @@ describe("auth schema security constraints", () => {
     assert.ok(columns.includes("expires_at"));
     assert.ok(columns.includes("consumed_at"));
     assert.ok(columns.includes("attempt_count"));
+    assert.ok(columns.includes("challenge_digest"));
+    assert.equal(columns.includes("challenge"), false);
+    assert.ok(columns.includes("pending_email"));
     assert.ok(checks.includes("webauthn_ceremonies_expiry_check"));
     assert.ok(checks.includes("webauthn_ceremonies_attempts_check"));
     assert.ok(checks.includes("webauthn_ceremonies_recovery_binding_check"));

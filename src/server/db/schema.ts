@@ -178,6 +178,8 @@ export const webauthnCeremonies = pgTable(
     ),
     pendingUserHandle: bytea("pending_user_handle"),
     pendingDisplayName: varchar("pending_display_name", { length: 200 }),
+    pendingEmail: varchar("pending_email", { length: 320 }),
+    pendingEmailNormalized: varchar("pending_email_normalized", { length: 320 }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     consumedAt: timestamp("consumed_at", { withTimezone: true }),
     attemptCount: integer("attempt_count").default(0).notNull(),
@@ -200,6 +202,10 @@ export const webauthnCeremonies = pgTable(
     check(
       "webauthn_ceremonies_pending_user_handle_length_check",
       sql`${table.pendingUserHandle} is null or octet_length(${table.pendingUserHandle}) = 32`,
+    ),
+    check(
+      "webauthn_ceremonies_pending_email_pair_check",
+      sql`(${table.pendingEmail} is null and ${table.pendingEmailNormalized} is null) or (${table.pendingEmail} is not null and ${table.pendingEmailNormalized} is not null)`,
     ),
     check(
       "webauthn_ceremonies_expiry_check",

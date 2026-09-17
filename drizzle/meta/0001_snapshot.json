@@ -1,0 +1,896 @@
+{
+  "id": "681960ba-fdd2-4f4f-903e-7ef3bdb3cb2b",
+  "prevId": "642f1e86-4f15-4173-a879-4f3a2b68c940",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.recovery_codes": {
+      "name": "recovery_codes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selector": {
+          "name": "selector",
+          "type": "varchar(22)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "digest": {
+          "name": "digest",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pepper_key_version": {
+          "name": "pepper_key_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "recovery_code_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "claim_id": {
+          "name": "claim_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "claimed_at": {
+          "name": "claimed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "recovery_codes_selector_unique": {
+          "name": "recovery_codes_selector_unique",
+          "columns": [
+            {
+              "expression": "selector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "recovery_codes_claim_id_unique": {
+          "name": "recovery_codes_claim_id_unique",
+          "columns": [
+            {
+              "expression": "claim_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"recovery_codes\".\"claim_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "recovery_codes_one_active_per_user_unique": {
+          "name": "recovery_codes_one_active_per_user_unique",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"recovery_codes\".\"status\" = 'active'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "recovery_codes_user_id_index": {
+          "name": "recovery_codes_user_id_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "recovery_codes_user_id_users_id_fk": {
+          "name": "recovery_codes_user_id_users_id_fk",
+          "tableFrom": "recovery_codes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "recovery_codes_digest_length_check": {
+          "name": "recovery_codes_digest_length_check",
+          "value": "octet_length(\"recovery_codes\".\"digest\") = 32"
+        },
+        "recovery_codes_pepper_key_version_check": {
+          "name": "recovery_codes_pepper_key_version_check",
+          "value": "\"recovery_codes\".\"pepper_key_version\" > 0"
+        },
+        "recovery_codes_state_check": {
+          "name": "recovery_codes_state_check",
+          "value": "(\n        (\"recovery_codes\".\"status\" = 'active' and \"recovery_codes\".\"claim_id\" is null and \"recovery_codes\".\"claimed_at\" is null and \"recovery_codes\".\"consumed_at\" is null and \"recovery_codes\".\"revoked_at\" is null)\n        or (\"recovery_codes\".\"status\" = 'claimed' and \"recovery_codes\".\"claim_id\" is not null and \"recovery_codes\".\"claimed_at\" is not null and \"recovery_codes\".\"consumed_at\" is null and \"recovery_codes\".\"revoked_at\" is null)\n        or (\"recovery_codes\".\"status\" = 'consumed' and \"recovery_codes\".\"claim_id\" is not null and \"recovery_codes\".\"claimed_at\" is not null and \"recovery_codes\".\"consumed_at\" is not null and \"recovery_codes\".\"revoked_at\" is null)\n        or (\"recovery_codes\".\"status\" = 'revoked' and \"recovery_codes\".\"consumed_at\" is null and \"recovery_codes\".\"revoked_at\" is not null)\n      )"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.sessions": {
+      "name": "sessions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_digest": {
+          "name": "token_digest",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_seen_at": {
+          "name": "last_seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "idle_expires_at": {
+          "name": "idle_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "absolute_expires_at": {
+          "name": "absolute_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "sessions_token_digest_unique": {
+          "name": "sessions_token_digest_unique",
+          "columns": [
+            {
+              "expression": "token_digest",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sessions_user_id_index": {
+          "name": "sessions_user_id_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sessions_idle_expires_at_index": {
+          "name": "sessions_idle_expires_at_index",
+          "columns": [
+            {
+              "expression": "idle_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "sessions_absolute_expires_at_index": {
+          "name": "sessions_absolute_expires_at_index",
+          "columns": [
+            {
+              "expression": "absolute_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
+          "tableFrom": "sessions",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "sessions_token_digest_length_check": {
+          "name": "sessions_token_digest_length_check",
+          "value": "octet_length(\"sessions\".\"token_digest\") = 32"
+        },
+        "sessions_expiry_check": {
+          "name": "sessions_expiry_check",
+          "value": "\"sessions\".\"idle_expires_at\" > \"sessions\".\"created_at\" and \"sessions\".\"absolute_expires_at\" >= \"sessions\".\"idle_expires_at\""
+        },
+        "sessions_revoked_at_check": {
+          "name": "sessions_revoked_at_check",
+          "value": "\"sessions\".\"revoked_at\" is null or \"sessions\".\"revoked_at\" >= \"sessions\".\"created_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "webauthn_user_handle": {
+          "name": "webauthn_user_handle",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email_normalized": {
+          "name": "email_normalized",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email_verified_at": {
+          "name": "email_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "user_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "users_webauthn_user_handle_unique": {
+          "name": "users_webauthn_user_handle_unique",
+          "columns": [
+            {
+              "expression": "webauthn_user_handle",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "users_email_normalized_unique": {
+          "name": "users_email_normalized_unique",
+          "columns": [
+            {
+              "expression": "email_normalized",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"users\".\"email_normalized\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "users_webauthn_user_handle_length_check": {
+          "name": "users_webauthn_user_handle_length_check",
+          "value": "octet_length(\"users\".\"webauthn_user_handle\") = 32"
+        },
+        "users_email_pair_check": {
+          "name": "users_email_pair_check",
+          "value": "(\"users\".\"email\" is null and \"users\".\"email_normalized\" is null) or (\"users\".\"email\" is not null and \"users\".\"email_normalized\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.webauthn_ceremonies": {
+      "name": "webauthn_ceremonies",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "type": {
+          "name": "type",
+          "type": "webauthn_ceremony_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "challenge_digest": {
+          "name": "challenge_digest",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recovery_code_id": {
+          "name": "recovery_code_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_user_handle": {
+          "name": "pending_user_handle",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_display_name": {
+          "name": "pending_display_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_email": {
+          "name": "pending_email",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_email_normalized": {
+          "name": "pending_email_normalized",
+          "type": "varchar(320)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "consumed_at": {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "max_attempts": {
+          "name": "max_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 5
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "webauthn_ceremonies_challenge_digest_unique": {
+          "name": "webauthn_ceremonies_challenge_digest_unique",
+          "columns": [
+            {
+              "expression": "challenge_digest",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "webauthn_ceremonies_user_id_index": {
+          "name": "webauthn_ceremonies_user_id_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "webauthn_ceremonies_recovery_code_id_index": {
+          "name": "webauthn_ceremonies_recovery_code_id_index",
+          "columns": [
+            {
+              "expression": "recovery_code_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "webauthn_ceremonies_expires_at_index": {
+          "name": "webauthn_ceremonies_expires_at_index",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "webauthn_ceremonies_user_id_users_id_fk": {
+          "name": "webauthn_ceremonies_user_id_users_id_fk",
+          "tableFrom": "webauthn_ceremonies",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "webauthn_ceremonies_recovery_code_id_recovery_codes_id_fk": {
+          "name": "webauthn_ceremonies_recovery_code_id_recovery_codes_id_fk",
+          "tableFrom": "webauthn_ceremonies",
+          "tableTo": "recovery_codes",
+          "columnsFrom": [
+            "recovery_code_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "webauthn_ceremonies_challenge_digest_length_check": {
+          "name": "webauthn_ceremonies_challenge_digest_length_check",
+          "value": "octet_length(\"webauthn_ceremonies\".\"challenge_digest\") = 32"
+        },
+        "webauthn_ceremonies_pending_user_handle_length_check": {
+          "name": "webauthn_ceremonies_pending_user_handle_length_check",
+          "value": "\"webauthn_ceremonies\".\"pending_user_handle\" is null or octet_length(\"webauthn_ceremonies\".\"pending_user_handle\") = 32"
+        },
+        "webauthn_ceremonies_pending_email_pair_check": {
+          "name": "webauthn_ceremonies_pending_email_pair_check",
+          "value": "(\"webauthn_ceremonies\".\"pending_email\" is null and \"webauthn_ceremonies\".\"pending_email_normalized\" is null) or (\"webauthn_ceremonies\".\"pending_email\" is not null and \"webauthn_ceremonies\".\"pending_email_normalized\" is not null)"
+        },
+        "webauthn_ceremonies_expiry_check": {
+          "name": "webauthn_ceremonies_expiry_check",
+          "value": "\"webauthn_ceremonies\".\"expires_at\" > \"webauthn_ceremonies\".\"created_at\""
+        },
+        "webauthn_ceremonies_consumed_at_check": {
+          "name": "webauthn_ceremonies_consumed_at_check",
+          "value": "\"webauthn_ceremonies\".\"consumed_at\" is null or \"webauthn_ceremonies\".\"consumed_at\" >= \"webauthn_ceremonies\".\"created_at\""
+        },
+        "webauthn_ceremonies_attempts_check": {
+          "name": "webauthn_ceremonies_attempts_check",
+          "value": "\"webauthn_ceremonies\".\"attempt_count\" >= 0 and \"webauthn_ceremonies\".\"max_attempts\" > 0 and \"webauthn_ceremonies\".\"attempt_count\" <= \"webauthn_ceremonies\".\"max_attempts\""
+        },
+        "webauthn_ceremonies_recovery_binding_check": {
+          "name": "webauthn_ceremonies_recovery_binding_check",
+          "value": "\"webauthn_ceremonies\".\"type\" <> 'recovery' or \"webauthn_ceremonies\".\"recovery_code_id\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.webauthn_credentials": {
+      "name": "webauthn_credentials",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "credential_id": {
+          "name": "credential_id",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "public_key": {
+          "name": "public_key",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "counter": {
+          "name": "counter",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "0"
+        },
+        "transports": {
+          "name": "transports",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ARRAY[]::text[]"
+        },
+        "device_type": {
+          "name": "device_type",
+          "type": "webauthn_device_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "backed_up": {
+          "name": "backed_up",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "aaguid": {
+          "name": "aaguid",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "label": {
+          "name": "label",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_used_at": {
+          "name": "last_used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "revoked_at": {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "webauthn_credentials_credential_id_unique": {
+          "name": "webauthn_credentials_credential_id_unique",
+          "columns": [
+            {
+              "expression": "credential_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "webauthn_credentials_user_id_index": {
+          "name": "webauthn_credentials_user_id_index",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "webauthn_credentials_user_id_users_id_fk": {
+          "name": "webauthn_credentials_user_id_users_id_fk",
+          "tableFrom": "webauthn_credentials",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "webauthn_credentials_credential_id_length_check": {
+          "name": "webauthn_credentials_credential_id_length_check",
+          "value": "octet_length(\"webauthn_credentials\".\"credential_id\") between 1 and 1023"
+        },
+        "webauthn_credentials_public_key_length_check": {
+          "name": "webauthn_credentials_public_key_length_check",
+          "value": "octet_length(\"webauthn_credentials\".\"public_key\") > 0"
+        },
+        "webauthn_credentials_counter_check": {
+          "name": "webauthn_credentials_counter_check",
+          "value": "\"webauthn_credentials\".\"counter\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.recovery_code_status": {
+      "name": "recovery_code_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "claimed",
+        "consumed",
+        "revoked"
+      ]
+    },
+    "public.user_status": {
+      "name": "user_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "disabled"
+      ]
+    },
+    "public.webauthn_ceremony_type": {
+      "name": "webauthn_ceremony_type",
+      "schema": "public",
+      "values": [
+        "signup",
+        "authentication",
+        "add_credential",
+        "recovery"
+      ]
+    },
+    "public.webauthn_device_type": {
+      "name": "webauthn_device_type",
+      "schema": "public",
+      "values": [
+        "single_device",
+        "multi_device"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

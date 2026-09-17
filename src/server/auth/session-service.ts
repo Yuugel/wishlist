@@ -23,6 +23,7 @@ export type IssuedSession = {
 export type ResolvedSession = {
   sessionId: string;
   userId: string;
+  createdAt: Date;
   idleExpiresAt: Date;
   absoluteExpiresAt: Date;
 };
@@ -115,11 +116,56 @@ export async function resolveSession(
     .returning({
       sessionId: sessions.id,
       userId: sessions.userId,
+      createdAt: sessions.createdAt,
       idleExpiresAt: sessions.idleExpiresAt,
       absoluteExpiresAt: sessions.absoluteExpiresAt,
     });
 
   return resolved ?? null;
+}
+
+/** Creates a new session and revokes the browser's previous token atomically. */
+export async function rotateSession(input: {
+  userId: string;
+  previousToken?: string;
+  now?: Date;
+}): Promise<IssuedSession> {
+  const now = input.now ?? new Date();
+  const token = generateSessionToken();
+  const idleExpiresAt = new Date(now.getTime() + DEFAULT_IDLE_LIFETIME_MS);
+  const absoluteExpiresAt = new Date(
+    now.getTime() + DEFAULT_ABSOLUTE_LIFETIME_MS,
+  );
+
+  return db.transaction(async (tx) => {
+    if (input.previousToken && isSessionToken(input.previousToken)) {
+      await tx
+        .update(sessions)
+        .set({ revokedAt: now, updatedAt: now })
+        .where(
+          and(
+            eq(sessions.tokenDigest, hashSessionToken(input.previousToken)),
+            isNull(sessions.revokedAt),
+          ),
+        );
+    }
+
+    const [created] = await tx
+      .insert(sessions)
+      .values({
+        userId: input.userId,
+        tokenDigest: hashSessionToken(token),
+        lastSeenAt: now,
+        idleExpiresAt,
+        absoluteExpiresAt,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: sessions.id });
+
+    if (!created) throw new Error("Session rotation failed");
+    return { token, sessionId: created.id, idleExpiresAt, absoluteExpiresAt };
+  });
 }
 
 export async function revokeSession(
