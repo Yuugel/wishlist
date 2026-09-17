@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "node --conditions=react-server --import tsx --test src/server/auth/recovery-code.test.ts src/server/auth/session-token.test.ts src/server/auth/webauthn-ceremony.test.ts src/server/db/schema.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push"
@@ -29,10 +30,11 @@
     "@types/pg": "8.23.1",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "drizzle-kit": "0.31.10",
     "dotenv": "17.4.2",
+    "drizzle-kit": "0.31.10",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.5",
+    "tsx": "4.23.13",
     "typescript": "5.9.3"
   }
 }
