@@ -1,8 +1,15 @@
 import "server-only";
 
-import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
-import { createWishChangedActivity } from "../activity/activity-service";
-import { insertWishChangedActivity } from "../activity/drizzle-activity-repository";
+import { and, asc, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import {
+  createTakeoverReleasedActivity,
+  createWishChangedActivity,
+  createWishDeletedActivity,
+} from "../activity/activity-service";
+import {
+  insertActivity,
+  insertWishChangedActivity,
+} from "../activity/drizzle-activity-repository";
 import { db } from "../db/client";
 import {
   groupMemberships,
@@ -111,6 +118,7 @@ export const drizzleWishRepository: WishRepository = {
                   inArray(groups.id, input.groupIds),
                 ),
               )
+              .orderBy(asc(groups.id))
               .for("update");
       const invalidIds = invalidGroupIds(
         input.groupIds,
@@ -199,6 +207,7 @@ export const drizzleWishRepository: WishRepository = {
               inArray(groups.id, input.groupIds),
             ),
           )
+          .orderBy(asc(groups.id))
           .for("update");
         const invalidIds = invalidGroupIds(
           input.groupIds,
@@ -364,6 +373,44 @@ export const drizzleWishRepository: WishRepository = {
           createdAt: input.now,
         });
         if (activity) await insertWishChangedActivity(tx, activity);
+
+        // A system lifecycle release is intentionally allowed for both
+        // reserved and purchased takeovers. Unlike the taker's manual
+        // purchased -> reserved -> available flow, visibility loss makes any
+        // continuation invalid.
+        const visibility = await tx.execute<{ has_common_visibility: boolean }>(sql`
+          select exists (
+            select 1
+            from wish_groups wg
+            inner join group_memberships owner_membership
+              on owner_membership.group_id = wg.group_id
+             and owner_membership.user_id = ${input.ownerId}
+            inner join group_memberships taker_membership
+              on taker_membership.group_id = wg.group_id
+             and taker_membership.user_id = ${activeTakeover.takerId}
+            where wg.wish_id = ${input.wishId}
+          ) as has_common_visibility
+        `);
+        if (!visibility.rows[0]?.has_common_visibility) {
+          await tx
+            .delete(wishTakeovers)
+            .where(
+              and(
+                eq(wishTakeovers.wishId, input.wishId),
+                eq(wishTakeovers.takerId, activeTakeover.takerId),
+              ),
+            );
+          await insertActivity(
+            tx,
+            createTakeoverReleasedActivity({
+              recipientId: activeTakeover.takerId,
+              wishId: input.wishId,
+              wishTitle: updated.title,
+              takeoverStatus: activeTakeover.status,
+              createdAt: input.now,
+            }),
+          );
+        }
       }
 
       const finalGroups = await tx
@@ -381,10 +428,47 @@ export const drizzleWishRepository: WishRepository = {
   },
 
   async deleteWish(input): Promise<boolean> {
-    const [deleted] = await db
-      .delete(wishes)
-      .where(and(eq(wishes.id, input.wishId), eq(wishes.ownerId, input.ownerId)))
-      .returning({ id: wishes.id });
-    return deleted !== undefined;
+    return db.transaction(async (tx) => {
+      // The same wish-row lock is used by takeover transitions and updates,
+      // making the tombstone snapshot and hard delete one atomic decision.
+      const [wish] = await tx
+        .select({ id: wishes.id, title: wishes.title })
+        .from(wishes)
+        .where(
+          and(eq(wishes.id, input.wishId), eq(wishes.ownerId, input.ownerId)),
+        )
+        .for("update")
+        .limit(1);
+      if (!wish) return false;
+
+      const [takeover] = await tx
+        .select({
+          takerId: wishTakeovers.takerId,
+          status: wishTakeovers.status,
+        })
+        .from(wishTakeovers)
+        .where(eq(wishTakeovers.wishId, wish.id))
+        .for("update")
+        .limit(1);
+
+      if (takeover) {
+        await insertActivity(
+          tx,
+          createWishDeletedActivity({
+            recipientId: takeover.takerId,
+            wishId: wish.id,
+            wishTitle: wish.title,
+            takeoverStatus: takeover.status,
+            createdAt: input.now,
+          }),
+        );
+      }
+
+      const [deleted] = await tx
+        .delete(wishes)
+        .where(and(eq(wishes.id, wish.id), eq(wishes.ownerId, input.ownerId)))
+        .returning({ id: wishes.id });
+      return deleted !== undefined;
+    });
   },
 };

@@ -59,8 +59,7 @@ const lazyDrizzleRepository: GroupRepository = {
 };
 
 /**
- * Production group service. A future Activity integration can pass
- * `onGroupDissolved` at this boundary; no notification side effect is part of
- * the current ticket.
+ * Production group service. Transactional lifecycle persistence lives in the
+ * Drizzle repository; the optional domain hook is not used by this adapter.
  */
 export const groupService = createGroupService(lazyDrizzleRepository);

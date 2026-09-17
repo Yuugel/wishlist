@@ -6,6 +6,8 @@ export function serializeActivity(activity: ActivityRecord) {
     eventType: activity.eventType,
     wishId: activity.wishId,
     wishTitle: activity.wishTitle,
+    takeoverStatus: activity.takeoverStatus,
+    groupName: activity.groupName,
     changedFields: activity.changedFields,
     addedGroupIds: activity.addedGroupIds,
     removedGroupIds: activity.removedGroupIds,

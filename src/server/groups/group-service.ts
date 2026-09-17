@@ -153,12 +153,17 @@ export function createGroupService(
     async leaveGroup(input: {
       groupId: string;
       userId: string;
+      confirmed?: boolean;
       now?: Date;
-    }): Promise<{ dissolved: boolean; group: GroupSummary | null }> {
+    }): Promise<
+      | { requiresConfirmation: true; dissolved: false; group: null }
+      | { requiresConfirmation: false; dissolved: boolean; group: GroupSummary | null }
+    > {
       requireActor(input.userId);
       const result = await repository.leaveGroup({
         groupId: input.groupId,
         userId: input.userId,
+        confirmed: input.confirmed === true,
         now: input.now ?? new Date(),
       });
 
@@ -168,16 +173,25 @@ export function createGroupService(
           "Only a current group member may leave the group.",
         );
       }
-
+      if (result.kind === "confirmation-required") {
+        return { requiresConfirmation: true, dissolved: false, group: null };
+      }
       if (result.kind === "dissolved") {
-        // The repository has committed before this hook runs. Future activity
-        // recording can use this seam without coupling groups to notifications
-        // or wishes.
+        // The production repository persists lifecycle activity in its own
+        // transaction. This post-commit hook remains useful to domain clients.
         await options.onGroupDissolved?.(result.event);
-        return { dissolved: true, group: null };
+        return {
+          requiresConfirmation: false,
+          dissolved: true,
+          group: null,
+        };
       }
 
-      return { dissolved: false, group: result.group };
+      return {
+        requiresConfirmation: false,
+        dissolved: false,
+        group: result.group,
+      };
     },
   };
 }

@@ -27,7 +27,10 @@ Alle Endpunkte benötigen eine aktive Session:
 - `POST /api/groups/join` mit `{ "token": "..." }` – Invite verwenden;
   wiederholte Requests desselben Nutzers sind idempotent
 - `POST /api/groups/:groupId/leave` – ausschließlich die eigene
-  Mitgliedschaft beenden
+  Mitgliedschaft beenden; falls aktive Übernahmen ihre letzte gemeinsame
+  Sichtbarkeit verlieren würden, antwortet der erste Request mit `409` und
+  `requiresConfirmation: true`. Erst ein neuer Request mit
+  `{ "confirmed": true }` führt den Austritt aus.
 
 Die Lese-API für Gruppen verwendet eine gemeinsame serverseitige
 Visibility-Schicht. Sie prüft die aktuelle Mitgliedschaft und filtert Wishes
@@ -41,8 +44,26 @@ Invite-Tokens enthalten einen 128-Bit-Selector und ein 256-Bit-Geheimnis. In
 der Datenbank stehen nur Selector und SHA-256-Digest. Ein Token ist sieben Tage
 gültig und kann innerhalb dieser Zeit mehrfach verwendet werden.
 
+## Lifecycle bei Sichtbarkeitsverlust
+
+Eine Übernahme ist nur gültig, solange mindestens eine dem Wunsch zugeordnete
+Gruppe existiert, in der Owner und Taker beide aktuell Mitglied sind. Diese
+Prüfung wird aus dem Serverzustand berechnet; eine Client-Group-ID oder eine
+Client-Liste betroffener Übernahmen ist kein Autorisierungsbeweis.
+
+Der Leave-Preview verändert noch keine Daten. Der bestätigte Request ermittelt
+den Zustand erneut. Membership-Änderung, gegebenenfalls Gruppenauflösung,
+Auto-Release und Activity-Einträge liegen in derselben Transaktion. Geordnete
+Group- und Wish-Row-Locks koordinieren dies mit Wish-Updates und
+Takeover-Transitionen.
+
 Sinkt eine Gruppe nach dem Austritt auf höchstens eine verbleibende Person,
-werden Gruppe, Mitgliedschaften und Invites in derselben Transaktion gelöscht.
-`createGroupService` bietet dafür den Post-Commit-Hook `onGroupDissolved` an;
-ein Activity-/Notification-System oder Wish-Tabellen werden hier nicht
-vorgezogen.
+werden Gruppe, Mitgliedschaften, Invites und Wish-Zuordnungen in derselben
+Transaktion gelöscht. Die Wünsche selbst bleiben Eigentum ihrer Owner. Die
+verbleibende Person erhält eine persistente Activity zur Auflösung.
+
+Ein Lifecycle-Auto-Release entfernt sowohl `reserved`- als auch
+`purchased`-Takeovers direkt, weil ohne gemeinsame Sichtbarkeit kein gültiger
+Zwischenzustand existiert. Das ändert nicht die manuelle Taker-Regel
+`purchased -> reserved -> available`. Owner-Antworten enthalten weder Status,
+Taker, Anzahl betroffener Takeovers noch Hinweise auf Activity-Einträge.

@@ -47,6 +47,35 @@ function mutationRow(result: { rows: MutationRow[] }): MutationRow {
   return row;
 }
 
+type SqlExecutor = Pick<typeof db, "execute">;
+
+async function lockVisibilityGroups(
+  executor: SqlExecutor,
+  input: { wishId: string; actorId: string },
+): Promise<void> {
+  // Group leave/dissolution and wish assignment changes use group-row locks.
+  // Acquiring those locks before the shared wish-row lock gives all lifecycle
+  // mutations one ordering and prevents a reserve from committing against a
+  // membership snapshot that has just become invalid.
+  await executor.execute(sql`
+    select visible_group.id
+    from groups visible_group
+    inner join wish_groups assignment
+      on assignment.group_id = visible_group.id
+    inner join wishes wish on wish.id = assignment.wish_id
+    inner join group_memberships viewer_membership
+      on viewer_membership.group_id = assignment.group_id
+     and viewer_membership.user_id = ${input.actorId}
+    inner join group_memberships owner_membership
+      on owner_membership.group_id = assignment.group_id
+     and owner_membership.user_id = wish.owner_id
+    where wish.id = ${input.wishId}
+      and wish.owner_id <> ${input.actorId}
+    order by visible_group.id
+    for update of visible_group
+  `);
+}
+
 /**
  * Authorization is deliberately part of every mutation statement. A wish is
  * visible only while both owner and actor are current members of at least one
@@ -54,7 +83,9 @@ function mutationRow(result: { rows: MutationRow[] }): MutationRow {
  */
 export const drizzleTakeoverRepository: TakeoverRepository = {
   async reserve(input): Promise<ReserveTakeoverResult> {
-    const result = await db.execute<MutationRow>(sql`
+    return db.transaction(async (tx) => {
+      await lockVisibilityGroups(tx, input);
+      const result = await tx.execute<MutationRow>(sql`
       with authorized_wish as (
         select w.id
         from wishes w
@@ -103,12 +134,15 @@ export const drizzleTakeoverRepository: TakeoverRepository = {
     if (row.kind === "reserved") {
       return { kind: "reserved", takeover: takeoverFromRow(row) };
     }
-    if (row.kind === "already-taken") return { kind: "already-taken" };
-    return { kind: "access-denied" };
+      if (row.kind === "already-taken") return { kind: "already-taken" };
+      return { kind: "access-denied" };
+    });
   },
 
   async transition(input): Promise<TransitionTakeoverResult> {
-    const result = await db.execute<MutationRow>(sql`
+    return db.transaction(async (tx) => {
+      await lockVisibilityGroups(tx, input);
+      const result = await tx.execute<MutationRow>(sql`
       with authorized_wish as (
         select w.id
         from wishes w
@@ -163,14 +197,17 @@ export const drizzleTakeoverRepository: TakeoverRepository = {
     if (row.kind === "transitioned") {
       return { kind: "transitioned", takeover: takeoverFromRow(row) };
     }
-    if (row.kind === "invalid-transition") {
-      return { kind: "invalid-transition" };
-    }
-    return { kind: "access-denied" };
+      if (row.kind === "invalid-transition") {
+        return { kind: "invalid-transition" };
+      }
+      return { kind: "access-denied" };
+    });
   },
 
   async release(input): Promise<ReleaseTakeoverResult> {
-    const result = await db.execute<MutationRow>(sql`
+    return db.transaction(async (tx) => {
+      await lockVisibilityGroups(tx, input);
+      const result = await tx.execute<MutationRow>(sql`
       with authorized_wish as (
         select w.id
         from wishes w
@@ -218,10 +255,11 @@ export const drizzleTakeoverRepository: TakeoverRepository = {
     if (row.kind === "released") {
       return { kind: "released", takeover: takeoverFromRow(row) };
     }
-    if (row.kind === "invalid-transition") {
-      return { kind: "invalid-transition" };
-    }
-    return { kind: "access-denied" };
+      if (row.kind === "invalid-transition") {
+        return { kind: "invalid-transition" };
+      }
+      return { kind: "access-denied" };
+    });
   },
 
   async getViewerStatus(input) {

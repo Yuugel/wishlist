@@ -5,6 +5,7 @@ import {
   groupErrorResponse,
   isUuid,
   NO_STORE_HEADERS,
+  readJsonBody,
   rejectCrossOriginMutation,
   serializeGroup,
 } from "../../_utils";
@@ -30,13 +31,41 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
     }
 
+    let confirmed = false;
+    if (request.headers.get("content-type")) {
+      const body = await readJsonBody(request);
+      if (
+        !body ||
+        (body.confirmed !== undefined && typeof body.confirmed !== "boolean")
+      ) {
+        return NextResponse.json(
+          { error: "invalid_request" },
+          { status: 400, headers: NO_STORE_HEADERS },
+        );
+      }
+      confirmed = body.confirmed === true;
+    }
+
     const groupService = await getGroupService();
     const result = await groupService.leaveGroup({
       groupId,
       userId: session.userId,
+      confirmed,
     });
+    if (result.requiresConfirmation) {
+      return NextResponse.json(
+        {
+          error: "leave_confirmation_required",
+          requiresConfirmation: true,
+          message:
+            "Durch den Austritt würden aktive Übernahmen ihre letzte gemeinsame Sichtbarkeit verlieren.",
+        },
+        { status: 409, headers: NO_STORE_HEADERS },
+      );
+    }
     return NextResponse.json(
       {
+        requiresConfirmation: false,
         dissolved: result.dissolved,
         group: result.group ? serializeGroup(result.group) : null,
       },

@@ -34,6 +34,9 @@ describe("wish view boundaries", () => {
       ...record,
       takeoverStatus: "purchased" as const,
       takeoverTakerId: "bob",
+      autoReleased: true,
+      activityRecipientId: "bob",
+      affectedTakeoverCount: 1,
     };
     const owner = toOwnerWishView(secretBearingRecord);
     const groupOwner = toGroupOwnerWishView(secretBearingRecord);
@@ -65,5 +68,8 @@ describe("wish view boundaries", () => {
     }
     assert.equal("takeoverStatus" in serializedOwner, false);
     assert.equal("takeoverStatus" in serializedGroupOwner, false);
+    assert.equal("autoReleased" in serializedOwner, false);
+    assert.equal("activityRecipientId" in serializedOwner, false);
+    assert.equal("affectedTakeoverCount" in serializedOwner, false);
   });
 });

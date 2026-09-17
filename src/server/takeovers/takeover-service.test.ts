@@ -260,7 +260,7 @@ describe("takeover service", () => {
     assert.equal(repository.takeoverCount("shared"), 0);
   });
 
-  it("requires current visibility for later transitions without implementing auto-release", async () => {
+  it("requires current visibility for later manual transitions", async () => {
     const { repository, service, now } = fixture();
     await service.reserveWish({ wishId: "shared", actorId: "alice", now });
     repository.removeMember("group-a", "alice");

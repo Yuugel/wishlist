@@ -54,6 +54,9 @@ export const wishTakeoverStatus = pgEnum("wish_takeover_status", [
 ]);
 export const activityEventType = pgEnum("activity_event_type", [
   "wish_changed",
+  "takeover_released_visibility_lost",
+  "wish_deleted",
+  "group_dissolved",
 ]);
 
 export const users = pgTable(
@@ -200,8 +203,13 @@ export const activities = pgTable(
     wishId: uuid("wish_id").references(() => wishes.id, {
       onDelete: "set null",
     }),
-    wishTitle: varchar("wish_title", { length: 200 }).notNull(),
-    changedFields: text("changed_fields").array().notNull(),
+    wishTitle: varchar("wish_title", { length: 200 }),
+    takeoverStatus: wishTakeoverStatus("takeover_status"),
+    groupName: varchar("group_name", { length: 200 }),
+    changedFields: text("changed_fields")
+      .array()
+      .default(sql`ARRAY[]::text[]`)
+      .notNull(),
     addedGroupIds: uuid("added_group_ids")
       .array()
       .default(sql`ARRAY[]::uuid[]`)
@@ -222,15 +230,42 @@ export const activities = pgTable(
     index("activities_wish_id_index").on(table.wishId),
     check(
       "activities_wish_title_length_check",
-      sql`char_length(btrim(${table.wishTitle})) between 1 and 200`,
+      sql`${table.wishTitle} is null or char_length(btrim(${table.wishTitle})) between 1 and 200`,
+    ),
+    check(
+      "activities_group_name_length_check",
+      sql`${table.groupName} is null or char_length(btrim(${table.groupName})) between 1 and 200`,
     ),
     check(
       "activities_changed_fields_check",
       sql`${table.changedFields} <@ ARRAY['title', 'description', 'link', 'priceText']::text[]`,
     ),
     check(
-      "activities_change_data_check",
-      sql`cardinality(${table.changedFields}) > 0 or cardinality(${table.addedGroupIds}) > 0 or cardinality(${table.removedGroupIds}) > 0`,
+      "activities_event_data_check",
+      sql`(
+        ${table.eventType} = 'wish_changed'
+        and ${table.wishTitle} is not null
+        and ${table.takeoverStatus} is null
+        and ${table.groupName} is null
+        and (cardinality(${table.changedFields}) > 0 or cardinality(${table.addedGroupIds}) > 0 or cardinality(${table.removedGroupIds}) > 0)
+      ) or (
+        ${table.eventType} in ('takeover_released_visibility_lost', 'wish_deleted')
+        and ${table.wishTitle} is not null
+        and ${table.takeoverStatus} is not null
+        and ${table.groupName} is null
+        and cardinality(${table.changedFields}) = 0
+        and cardinality(${table.addedGroupIds}) = 0
+        and cardinality(${table.removedGroupIds}) = 0
+      ) or (
+        ${table.eventType} = 'group_dissolved'
+        and ${table.wishId} is null
+        and ${table.wishTitle} is null
+        and ${table.takeoverStatus} is null
+        and ${table.groupName} is not null
+        and cardinality(${table.changedFields}) = 0
+        and cardinality(${table.addedGroupIds}) = 0
+        and cardinality(${table.removedGroupIds}) = 0
+      )`,
     ),
   ],
 );

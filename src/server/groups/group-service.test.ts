@@ -35,6 +35,11 @@ class MemoryGroupRepository implements GroupRepository {
     }
   >();
   private readonly displayNames = new Map<string, string>();
+  private leaveNeedsConfirmation = false;
+
+  setLeaveNeedsConfirmation(value: boolean): void {
+    this.leaveNeedsConfirmation = value;
+  }
 
   addUser(userId: string, displayName = userId): void {
     this.displayNames.set(userId, displayName);
@@ -134,6 +139,9 @@ class MemoryGroupRepository implements GroupRepository {
 
     const memberIndex = group.memberIds.indexOf(input.userId);
     if (memberIndex < 0) return { kind: "not-member" };
+    if (this.leaveNeedsConfirmation && !input.confirmed) {
+      return { kind: "confirmation-required" };
+    }
     group.memberIds.splice(memberIndex, 1);
 
     if (group.memberIds.length <= 1) {
@@ -142,6 +150,7 @@ class MemoryGroupRepository implements GroupRepository {
         kind: "dissolved",
         event: {
           groupId: input.groupId,
+          groupName: group.summary.name,
           departedUserId: input.userId,
           remainingMemberIds: [...group.memberIds],
           dissolvedAt: input.now,
@@ -307,6 +316,58 @@ describe("group service", () => {
     });
     assert.equal(left.dissolved, false);
     assert.deepEqual(repository.memberIds(group.id), ["alice", "carol"]);
+  });
+
+  it("requires an explicit second request without mutating the preview state", async () => {
+    const repository = new MemoryGroupRepository();
+    const service = createGroupService(repository);
+    const now = new Date("2026-09-17T00:00:00.000Z");
+    const group = await service.createGroup({ userId: "alice", name: "Team", now });
+    const invite = await service.createInvite({ groupId: group.id, userId: "alice", now });
+    await service.joinGroup({ token: invite.token, userId: "bob", now });
+    await service.joinGroup({ token: invite.token, userId: "carol", now });
+    repository.setLeaveNeedsConfirmation(true);
+
+    const preview = await service.leaveGroup({
+      groupId: group.id,
+      userId: "alice",
+      now,
+    });
+    assert.deepEqual(preview, {
+      requiresConfirmation: true,
+      dissolved: false,
+      group: null,
+    });
+    assert.deepEqual(repository.memberIds(group.id), ["alice", "bob", "carol"]);
+
+    const confirmed = await service.leaveGroup({
+      groupId: group.id,
+      userId: "alice",
+      confirmed: true,
+      now,
+    });
+    assert.equal(confirmed.requiresConfirmation, false);
+    assert.deepEqual(repository.memberIds(group.id), ["bob", "carol"]);
+  });
+
+  it("uses current repository state again for a confirmed leave", async () => {
+    const repository = new MemoryGroupRepository();
+    const service = createGroupService(repository);
+    const now = new Date("2026-09-17T00:00:00.000Z");
+    const group = await service.createGroup({ userId: "alice", name: "Team", now });
+    const invite = await service.createInvite({ groupId: group.id, userId: "alice", now });
+    await service.joinGroup({ token: invite.token, userId: "bob", now });
+    await service.joinGroup({ token: invite.token, userId: "carol", now });
+
+    repository.setLeaveNeedsConfirmation(false);
+    const result = await service.leaveGroup({
+      groupId: group.id,
+      userId: "alice",
+      confirmed: true,
+      now,
+    });
+    assert.equal(result.requiresConfirmation, false);
+    assert.deepEqual(repository.memberIds(group.id), ["bob", "carol"]);
   });
 
   it("dissolves a group at one remaining member and emits the lifecycle hook", async () => {

@@ -29,7 +29,7 @@ const lazyDrizzleRepository: WishRepository = {
     return drizzleWishRepository.updateWish(input);
   },
 
-  async deleteWish(input: { wishId: string; ownerId: string }) {
+  async deleteWish(input: { wishId: string; ownerId: string; now: Date }) {
     const { drizzleWishRepository } = await import(
       "./drizzle-wish-repository"
     );

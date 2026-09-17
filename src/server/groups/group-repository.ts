@@ -31,6 +31,7 @@ export type JoinGroupInput = {
 export type LeaveGroupInput = {
   groupId: string;
   userId: string;
+  confirmed: boolean;
   now: Date;
 };
 
@@ -59,6 +60,6 @@ export type GroupDissolvedHook = (
 ) => void | Promise<void>;
 
 export type GroupServiceOptions = {
-  /** Post-commit seam for the future activity integration. */
+  /** Optional post-commit observer; persistence stays inside the repository transaction. */
   onGroupDissolved?: GroupDissolvedHook;
 };

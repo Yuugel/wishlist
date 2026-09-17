@@ -208,13 +208,20 @@ describe("auth schema security constraints", () => {
       "event_type",
       "wish_id",
       "wish_title",
+      "takeover_status",
+      "group_name",
       "changed_fields",
       "added_group_ids",
       "removed_group_ids",
       "created_at",
     ]);
-    assert.deepEqual(eventType?.enumValues, ["wish_changed"]);
-    assert.equal(activityEventType.enumValues[0], "wish_changed");
+    assert.deepEqual(eventType?.enumValues, [
+      "wish_changed",
+      "takeover_released_visibility_lost",
+      "wish_deleted",
+      "group_dissolved",
+    ]);
+    assert.deepEqual(activityEventType.enumValues, eventType?.enumValues);
     assert.equal(wishId?.notNull, false);
     assert.equal(config.foreignKeys.length, 2);
     assert.ok(
@@ -224,7 +231,7 @@ describe("auth schema security constraints", () => {
     );
     assert.ok(indexNames(activities).includes("activities_wish_id_index"));
     assert.ok(
-      checkNames(activities).includes("activities_change_data_check"),
+      checkNames(activities).includes("activities_event_data_check"),
     );
   });
 

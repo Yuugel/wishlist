@@ -76,6 +76,8 @@ export function GroupView({ groupId }: { groupId: string }) {
   const [message, setMessage] = useState<string>();
   const [actionMessage, setActionMessage] = useState<string>();
   const [busyWishId, setBusyWishId] = useState<string>();
+  const [leaving, setLeaving] = useState(false);
+  const [leaveNeedsConfirmation, setLeaveNeedsConfirmation] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -191,6 +193,46 @@ export function GroupView({ groupId }: { groupId: string }) {
     }
   }
 
+  async function leaveGroup(confirmed: boolean) {
+    setLeaving(true);
+    setActionMessage(undefined);
+    try {
+      const response = await fetch(
+        `/api/groups/${encodeURIComponent(groupId)}/leave`,
+        {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmed }),
+        },
+      );
+      const data = (await response.json().catch(() => ({}))) as ApiError & {
+        requiresConfirmation?: boolean;
+        dissolved?: boolean;
+      };
+      if (response.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      if (response.status === 409 && data.requiresConfirmation) {
+        setLeaveNeedsConfirmation(true);
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(data.message ?? "Die Gruppe konnte nicht verlassen werden.");
+      }
+      router.push(`/groups?leave=${data.dissolved ? "dissolved" : "left"}`);
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error
+          ? error.message
+          : "Die Gruppe konnte nicht verlassen werden.",
+      );
+    } finally {
+      setLeaving(false);
+    }
+  }
+
   return (
     <div className="stack">
       <div className="actions">
@@ -221,6 +263,45 @@ export function GroupView({ groupId }: { groupId: string }) {
 
           {actionMessage && (
             <p className="notice" role="alert">{actionMessage}</p>
+          )}
+
+          {leaveNeedsConfirmation ? (
+            <section className="group-section" aria-labelledby="leave-warning-heading">
+              <h3 id="leave-warning-heading">Austritt bestätigen</h3>
+              <p className="notice" role="alert">
+                Durch deinen Austritt verlieren aktive Übernahmen ihre letzte
+                gemeinsame Sichtbarkeit und werden automatisch freigegeben.
+                Prüfe das bitte, bevor du bewusst fortfährst.
+              </p>
+              <div className="actions compact-actions">
+                <button
+                  type="button"
+                  disabled={leaving}
+                  onClick={() => void leaveGroup(true)}
+                >
+                  Gruppe trotzdem verlassen
+                </button>
+                <button
+                  className="secondary"
+                  type="button"
+                  disabled={leaving}
+                  onClick={() => setLeaveNeedsConfirmation(false)}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </section>
+          ) : (
+            <div className="actions compact-actions">
+              <button
+                className="secondary"
+                type="button"
+                disabled={leaving}
+                onClick={() => void leaveGroup(false)}
+              >
+                Gruppe verlassen
+              </button>
+            </div>
           )}
 
           <section className="group-section" aria-labelledby="members-heading">

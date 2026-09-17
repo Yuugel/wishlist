@@ -2,6 +2,8 @@ import "server-only";
 
 import type {
   ActivityRepository,
+  GroupDissolvedActivityInput,
+  TakeoverLifecycleActivityInput,
   WishChangedActivityInput,
   WishChangeActivitySource,
 } from "./activity-repository";
@@ -46,12 +48,66 @@ export function createWishChangedActivity(
 
   return {
     recipientId: source.activeTakeover.takerId,
+    eventType: "wish_changed",
     wishId: source.wishId,
     wishTitle: source.wishTitle,
+    takeoverStatus: null,
+    groupName: null,
     changedFields: [...source.changes.changedFields],
     addedGroupIds: [...source.changes.addedGroupIds],
     removedGroupIds: [...source.changes.removedGroupIds],
     createdAt: source.createdAt,
+  };
+}
+
+export function createTakeoverReleasedActivity(input: {
+  recipientId: string;
+  wishId: string;
+  wishTitle: string;
+  takeoverStatus: "reserved" | "purchased";
+  createdAt: Date;
+}): TakeoverLifecycleActivityInput {
+  return {
+    ...input,
+    eventType: "takeover_released_visibility_lost",
+    groupName: null,
+    changedFields: [],
+    addedGroupIds: [],
+    removedGroupIds: [],
+  };
+}
+
+export function createWishDeletedActivity(input: {
+  recipientId: string;
+  wishId: string;
+  wishTitle: string;
+  takeoverStatus: "reserved" | "purchased";
+  createdAt: Date;
+}): TakeoverLifecycleActivityInput {
+  return {
+    ...input,
+    eventType: "wish_deleted",
+    groupName: null,
+    changedFields: [],
+    addedGroupIds: [],
+    removedGroupIds: [],
+  };
+}
+
+export function createGroupDissolvedActivity(input: {
+  recipientId: string;
+  groupName: string;
+  createdAt: Date;
+}): GroupDissolvedActivityInput {
+  return {
+    ...input,
+    eventType: "group_dissolved",
+    wishId: null,
+    wishTitle: null,
+    takeoverStatus: null,
+    changedFields: [],
+    addedGroupIds: [],
+    removedGroupIds: [],
   };
 }
 

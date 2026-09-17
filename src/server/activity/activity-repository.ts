@@ -3,29 +3,65 @@ import type { WishChangeSet, WishField } from "../wishes/wish-repository";
 
 export const ACTIVITY_LIST_LIMIT = 100;
 
-/**
- * Activity is intentionally a small, typed event log. New domain events can
- * extend this union and the table in a later additive migration without
- * introducing a separate notification platform.
- */
-export type ActivityEventType = "wish_changed";
+/** A deliberately small event log for recipient-facing MVP lifecycle events. */
+export type ActivityEventType =
+  | "wish_changed"
+  | "takeover_released_visibility_lost"
+  | "wish_deleted"
+  | "group_dissolved";
 
 export type WishChangedActivityInput = {
   recipientId: string;
+  eventType: "wish_changed";
   wishId: string;
   wishTitle: string;
+  takeoverStatus: null;
+  groupName: null;
   changedFields: WishField[];
   addedGroupIds: string[];
   removedGroupIds: string[];
   createdAt: Date;
 };
 
+export type TakeoverLifecycleActivityInput = {
+  recipientId: string;
+  eventType: "takeover_released_visibility_lost" | "wish_deleted";
+  wishId: string;
+  wishTitle: string;
+  takeoverStatus: TakeoverStatus;
+  groupName: null;
+  changedFields: [];
+  addedGroupIds: [];
+  removedGroupIds: [];
+  createdAt: Date;
+};
+
+export type GroupDissolvedActivityInput = {
+  recipientId: string;
+  eventType: "group_dissolved";
+  wishId: null;
+  wishTitle: null;
+  takeoverStatus: null;
+  groupName: string;
+  changedFields: [];
+  addedGroupIds: [];
+  removedGroupIds: [];
+  createdAt: Date;
+};
+
+export type ActivityInput =
+  | WishChangedActivityInput
+  | TakeoverLifecycleActivityInput
+  | GroupDissolvedActivityInput;
+
 export type ActivityRecord = {
   id: string;
   recipientId: string;
   eventType: ActivityEventType;
   wishId: string | null;
-  wishTitle: string;
+  wishTitle: string | null;
+  takeoverStatus: TakeoverStatus | null;
+  groupName: string | null;
   changedFields: WishField[];
   addedGroupIds: string[];
   removedGroupIds: string[];

@@ -9,7 +9,10 @@ import type { WishChangeSet } from "../wishes/wish-repository";
 import { serializeActivity } from "./activity-view";
 import {
   createActivityService,
+  createGroupDissolvedActivity,
+  createTakeoverReleasedActivity,
   createWishChangedActivity,
+  createWishDeletedActivity,
   ActivityServiceError,
 } from "./activity-service";
 
@@ -46,6 +49,8 @@ function record(
     eventType: "wish_changed",
     wishId: "wish-1",
     wishTitle: "Kopfhörer",
+    takeoverStatus: null,
+    groupName: null,
     changedFields: ["title"],
     addedGroupIds: [],
     removedGroupIds: [],
@@ -114,7 +119,10 @@ describe("activity service", () => {
     assert.deepEqual(activity, {
       recipientId: "taker",
       wishId: "wish-1",
+      eventType: "wish_changed",
       wishTitle: "Kopfhörer",
+      takeoverStatus: null,
+      groupName: null,
       changedFields: ["title", "description", "link", "priceText"],
       addedGroupIds: ["group-new"],
       removedGroupIds: ["group-old"],
@@ -138,6 +146,54 @@ describe("activity service", () => {
 
     assert.equal(activity?.recipientId, "buyer");
     assert.deepEqual(activity?.changedFields, ["priceText"]);
+  });
+
+  it("creates deletion-safe lifecycle snapshots for both takeover states", () => {
+    for (const takeoverStatus of ["reserved", "purchased"] as const) {
+      const deleted = createWishDeletedActivity({
+        recipientId: "taker",
+        wishId: "wish-1",
+        wishTitle: "Kopfhörer",
+        takeoverStatus,
+        createdAt: now,
+      });
+      assert.equal(deleted.eventType, "wish_deleted");
+      assert.equal(deleted.wishTitle, "Kopfhörer");
+      assert.equal(deleted.takeoverStatus, takeoverStatus);
+      assert.deepEqual(deleted.changedFields, []);
+
+      const released = createTakeoverReleasedActivity({
+        recipientId: "taker",
+        wishId: "wish-1",
+        wishTitle: "Kopfhörer",
+        takeoverStatus,
+        createdAt: now,
+      });
+      assert.equal(released.eventType, "takeover_released_visibility_lost");
+      assert.equal(released.takeoverStatus, takeoverStatus);
+    }
+  });
+
+  it("creates a recipient-scoped group dissolution snapshot", () => {
+    assert.deepEqual(
+      createGroupDissolvedActivity({
+        recipientId: "remaining",
+        groupName: "Familie",
+        createdAt: now,
+      }),
+      {
+        recipientId: "remaining",
+        eventType: "group_dissolved",
+        wishId: null,
+        wishTitle: null,
+        takeoverStatus: null,
+        groupName: "Familie",
+        changedFields: [],
+        addedGroupIds: [],
+        removedGroupIds: [],
+        createdAt: now,
+      },
+    );
   });
 
   it("does not create an event without an active takeover or for a no-op", () => {

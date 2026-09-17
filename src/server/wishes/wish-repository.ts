@@ -62,7 +62,11 @@ export interface WishRepository {
   createWish(input: CreateWishRepositoryInput): Promise<CreateWishResult>;
   listWishesForOwner(ownerId: string): Promise<WishRecord[]>;
   updateWish(input: UpdateWishRepositoryInput): Promise<UpdateWishResult>;
-  deleteWish(input: { wishId: string; ownerId: string }): Promise<boolean>;
+  deleteWish(input: {
+    wishId: string;
+    ownerId: string;
+    now: Date;
+  }): Promise<boolean>;
 }
 
 export type WishGroup = GroupSummary;

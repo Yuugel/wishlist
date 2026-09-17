@@ -6,9 +6,15 @@ import { useEffect, useState } from "react";
 
 type ApiActivity = {
   id: string;
-  eventType: "wish_changed";
+  eventType:
+    | "wish_changed"
+    | "takeover_released_visibility_lost"
+    | "wish_deleted"
+    | "group_dissolved";
   wishId: string | null;
-  wishTitle: string;
+  wishTitle: string | null;
+  takeoverStatus: "reserved" | "purchased" | null;
+  groupName: string | null;
   changedFields: Array<"title" | "description" | "link" | "priceText">;
   addedGroupIds: string[];
   removedGroupIds: string[];
@@ -34,8 +40,34 @@ function changeLabels(activity: ApiActivity): string[] {
   return labels.length > 0 ? labels : ["Wish-Daten"];
 }
 
+function activityHeading(activity: ApiActivity): string {
+  switch (activity.eventType) {
+    case "wish_changed":
+      return "Wunsch geändert";
+    case "takeover_released_visibility_lost":
+      return "Übernahme automatisch freigegeben";
+    case "wish_deleted":
+      return "Wunsch gelöscht";
+    case "group_dissolved":
+      return "Gruppe aufgelöst";
+  }
+}
+
+function takeoverLabel(status: ApiActivity["takeoverStatus"]): string {
+  return status === "purchased" ? "gekauften" : "reservierten";
+}
+
 function activityDescription(activity: ApiActivity): string {
-  return `Der Wunsch „${activity.wishTitle}“ wurde geändert: ${changeLabels(activity).join(", ")}.`;
+  switch (activity.eventType) {
+    case "wish_changed":
+      return `Der Wunsch „${activity.wishTitle ?? "Unbekannt"}“ wurde geändert: ${changeLabels(activity).join(", ")}.`;
+    case "takeover_released_visibility_lost":
+      return `Deine Übernahme des ${takeoverLabel(activity.takeoverStatus)} Wunsches „${activity.wishTitle ?? "Unbekannt"}“ wurde freigegeben, weil keine gemeinsame Gruppensichtbarkeit mehr besteht.`;
+    case "wish_deleted":
+      return `Der von dir ${takeoverLabel(activity.takeoverStatus)} Wunsch „${activity.wishTitle ?? "Unbekannt"}“ wurde gelöscht.`;
+    case "group_dissolved":
+      return `Die Gruppe „${activity.groupName ?? "Unbekannt"}“ wurde aufgrund des letzten Austritts aufgelöst.`;
+  }
 }
 
 function formatDate(value: string): string {
@@ -112,7 +144,7 @@ export function ActivityPanel() {
         <div className="activity-list">
           {activities.map((activity) => (
             <article className="activity-item" key={activity.id}>
-              <h2>Wunsch geändert</h2>
+              <h2>{activityHeading(activity)}</h2>
               <p>{activityDescription(activity)}</p>
               <time dateTime={activity.createdAt}>
                 {formatDate(activity.createdAt)}

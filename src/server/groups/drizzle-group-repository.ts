@@ -1,12 +1,19 @@
 import "server-only";
 
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import {
+  createGroupDissolvedActivity,
+  createTakeoverReleasedActivity,
+} from "../activity/activity-service";
+import { insertActivity } from "../activity/drizzle-activity-repository";
 import { db } from "../db/client";
 import {
   groupInvites,
   groupMemberships,
   groups,
   users,
+  wishes,
+  wishTakeovers,
 } from "../db/schema";
 import type { GroupRepository } from "./group-repository";
 import type {
@@ -211,6 +218,7 @@ export const drizzleGroupRepository: GroupRepository = {
 
   async leaveGroup(input): Promise<LeaveGroupResult> {
     return db.transaction(async (tx) => {
+      // Joins, wish assignment changes, and leaves serialize on the group row.
       const [group] = await tx
         .select({
           id: groups.id,
@@ -223,33 +231,155 @@ export const drizzleGroupRepository: GroupRepository = {
         .limit(1);
       if (!group) return { kind: "not-member" };
 
-      const [departed] = await tx
+      const members = await tx
+        .select({ userId: groupMemberships.userId })
+        .from(groupMemberships)
+        .where(eq(groupMemberships.groupId, input.groupId))
+        .orderBy(asc(groupMemberships.createdAt), asc(groupMemberships.userId));
+      if (!members.some((member) => member.userId === input.userId)) {
+        return { kind: "not-member" };
+      }
+
+      const dissolves = members.length <= 2;
+      const candidateResult = await tx.execute<{ wish_id: string }>(sql`
+        select distinct wish.id as wish_id
+        from wish_groups assignment
+        inner join wishes wish on wish.id = assignment.wish_id
+        inner join wish_takeovers takeover on takeover.wish_id = wish.id
+        where assignment.group_id = ${input.groupId}
+          and (
+            ${dissolves}
+            or wish.owner_id = ${input.userId}
+            or takeover.taker_id = ${input.userId}
+          )
+        order by wish.id
+      `);
+      const candidateWishIds = candidateResult.rows.map((row) => row.wish_id);
+
+      // Every takeover mutation follows the same wish-row lock. Lock all
+      // candidates before previewing or mutating membership state.
+      if (candidateWishIds.length > 0) {
+        await tx
+          .select({ id: wishes.id })
+          .from(wishes)
+          .where(inArray(wishes.id, candidateWishIds))
+          .orderBy(asc(wishes.id))
+          .for("update");
+      }
+
+      const affected = candidateWishIds.length === 0
+        ? []
+        : (await tx.execute<{ wish_id: string }>(sql`
+            select takeover.wish_id
+            from wish_takeovers takeover
+            inner join wishes wish on wish.id = takeover.wish_id
+            where takeover.wish_id = any(${candidateWishIds}::uuid[])
+              and not exists (
+                select 1
+                from wish_groups assignment
+                inner join group_memberships owner_membership
+                  on owner_membership.group_id = assignment.group_id
+                 and owner_membership.user_id = wish.owner_id
+                inner join group_memberships taker_membership
+                  on taker_membership.group_id = assignment.group_id
+                 and taker_membership.user_id = takeover.taker_id
+                where assignment.wish_id = wish.id
+                  and assignment.group_id <> ${input.groupId}
+              )
+          `)).rows;
+
+      if (affected.length > 0 && !input.confirmed) {
+        // Deliberately return no count, identity, wish, status, or recipient.
+        return { kind: "confirmation-required" };
+      }
+
+      await tx
         .delete(groupMemberships)
         .where(
           and(
             eq(groupMemberships.groupId, input.groupId),
             eq(groupMemberships.userId, input.userId),
           ),
-        )
-        .returning({ userId: groupMemberships.userId });
-      if (!departed) return { kind: "not-member" };
+        );
 
-      const remaining = await tx
-        .select({ userId: groupMemberships.userId })
-        .from(groupMemberships)
-        .where(eq(groupMemberships.groupId, input.groupId))
-        .orderBy(asc(groupMemberships.createdAt), asc(groupMemberships.userId));
-
-      if (remaining.length <= 1) {
-        // Foreign keys cascade the remaining membership and all invites in
-        // the same transaction as the final leave.
+      const remainingMemberIds = members
+        .map((member) => member.userId)
+        .filter((userId) => userId !== input.userId);
+      if (dissolves) {
+        // Cascades remove the remaining membership, invites, and wish-group
+        // assignments, but never the wishes themselves.
         await tx.delete(groups).where(eq(groups.id, input.groupId));
+      }
+
+      // Re-evaluate after the membership/group mutation. Preview data is never
+      // trusted by the confirmed request.
+      const invalidTakeovers = candidateWishIds.length === 0
+        ? []
+        : (await tx.execute<{
+            wish_id: string;
+            taker_id: string;
+            status: "reserved" | "purchased";
+            title: string;
+          }>(sql`
+            select takeover.wish_id, takeover.taker_id, takeover.status, wish.title
+            from wish_takeovers takeover
+            inner join wishes wish on wish.id = takeover.wish_id
+            where takeover.wish_id = any(${candidateWishIds}::uuid[])
+              and not exists (
+                select 1
+                from wish_groups assignment
+                inner join group_memberships owner_membership
+                  on owner_membership.group_id = assignment.group_id
+                 and owner_membership.user_id = wish.owner_id
+                inner join group_memberships taker_membership
+                  on taker_membership.group_id = assignment.group_id
+                 and taker_membership.user_id = takeover.taker_id
+                where assignment.wish_id = wish.id
+              )
+            order by takeover.wish_id
+          `)).rows;
+
+      if (invalidTakeovers.length > 0) {
+        await tx
+          .delete(wishTakeovers)
+          .where(
+            inArray(
+              wishTakeovers.wishId,
+              invalidTakeovers.map((takeover) => takeover.wish_id),
+            ),
+          );
+        for (const takeover of invalidTakeovers) {
+          await insertActivity(
+            tx,
+            createTakeoverReleasedActivity({
+              recipientId: takeover.taker_id,
+              wishId: takeover.wish_id,
+              wishTitle: takeover.title,
+              takeoverStatus: takeover.status,
+              createdAt: input.now,
+            }),
+          );
+        }
+      }
+
+      if (dissolves) {
+        for (const recipientId of remainingMemberIds) {
+          await insertActivity(
+            tx,
+            createGroupDissolvedActivity({
+              recipientId,
+              groupName: group.name,
+              createdAt: input.now,
+            }),
+          );
+        }
         return {
           kind: "dissolved",
           event: {
             groupId: input.groupId,
+            groupName: group.name,
             departedUserId: input.userId,
-            remainingMemberIds: remaining.map((member) => member.userId),
+            remainingMemberIds,
             dissolvedAt: input.now,
           },
         };

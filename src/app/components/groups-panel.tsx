@@ -10,11 +10,20 @@ type ApiGroup = {
   createdAt: string;
 };
 
-export function GroupsPanel() {
+export function GroupsPanel({
+  leaveResult,
+}: {
+  leaveResult?: "left" | "dissolved";
+}) {
   const router = useRouter();
   const [groups, setGroups] = useState<ApiGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string>();
+  const [message, setMessage] = useState<string | undefined>(() => {
+    if (leaveResult === "dissolved") {
+      return "Du hast die Gruppe verlassen. Die Gruppe wurde dabei aufgelöst.";
+    }
+    return leaveResult === "left" ? "Du hast die Gruppe verlassen." : undefined;
+  });
 
   useEffect(() => {
     let cancelled = false;

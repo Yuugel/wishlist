@@ -244,10 +244,12 @@ export function createWishService(repository: WishRepository) {
     async deleteWish(input: {
       wishId: string;
       ownerId: string;
+      now?: Date;
     }): Promise<boolean> {
       const deleted = await repository.deleteWish({
         wishId: requireIdentifier(input.wishId),
         ownerId: requireActor(input.ownerId),
+        now: input.now ?? new Date(),
       });
       if (!deleted) {
         throw new WishServiceError(

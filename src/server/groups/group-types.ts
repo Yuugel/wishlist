@@ -15,6 +15,7 @@ export type GroupDetails = GroupSummary & {
 
 export type GroupDissolvedEvent = {
   groupId: string;
+  groupName: string;
   departedUserId: string;
   remainingMemberIds: string[];
   dissolvedAt: Date;
@@ -27,5 +28,6 @@ export type JoinGroupResult =
 
 export type LeaveGroupResult =
   | { kind: "not-member" }
+  | { kind: "confirmation-required" }
   | { kind: "left"; group: GroupSummary }
   | { kind: "dissolved"; event: GroupDissolvedEvent };
