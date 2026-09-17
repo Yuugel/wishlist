@@ -94,6 +94,62 @@ export const groups = pgTable(
   ],
 );
 
+export const wishes = pgTable(
+  "wishes",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    ownerId: uuid("owner_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description"),
+    link: varchar("link", { length: 2_048 }),
+    priceText: varchar("price_text", { length: 200 }),
+    ...timestamps,
+  },
+  (table) => [
+    index("wishes_owner_id_index").on(table.ownerId),
+    check(
+      "wishes_title_length_check",
+      sql`char_length(btrim(${table.title})) between 1 and 200`,
+    ),
+    check(
+      "wishes_description_length_check",
+      sql`${table.description} is null or char_length(${table.description}) <= 5000`,
+    ),
+    check(
+      "wishes_link_length_check",
+      sql`${table.link} is null or char_length(btrim(${table.link})) between 1 and 2048`,
+    ),
+    check(
+      "wishes_price_text_length_check",
+      sql`${table.priceText} is null or char_length(btrim(${table.priceText})) between 1 and 200`,
+    ),
+  ],
+);
+
+export const wishGroups = pgTable(
+  "wish_groups",
+  {
+    wishId: uuid("wish_id")
+      .notNull()
+      .references(() => wishes.id, { onDelete: "cascade" }),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "wish_groups_wish_id_group_id_pk",
+      columns: [table.wishId, table.groupId],
+    }),
+    index("wish_groups_group_id_index").on(table.groupId),
+  ],
+);
+
 export const groupMemberships = pgTable(
   "group_memberships",
   {

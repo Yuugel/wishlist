@@ -88,13 +88,18 @@ label {
   font-weight: 700;
 }
 
-input {
+input,
+textarea {
   width: 100%;
   padding: 0.8rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   color: var(--foreground);
   font: inherit;
+}
+
+textarea {
+  resize: vertical;
 }
 
 button,
@@ -128,6 +133,83 @@ button:disabled {
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 2rem;
+}
+
+.wide-card {
+  width: min(100%, 56rem);
+}
+
+.wish-form,
+.wish-list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.wish-form {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.wish-form h2,
+.wish-item h2 {
+  margin: 0;
+}
+
+.group-picker {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.group-picker legend {
+  padding: 0 0.35rem;
+  font-weight: 700;
+}
+
+.checkbox-label {
+  display: flex;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 400;
+}
+
+.checkbox-label input {
+  width: auto;
+}
+
+.wish-item {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--card);
+}
+
+.wish-item-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.compact-actions {
+  margin-top: 0;
+}
+
+.wish-item p {
+  margin: 0.75rem 0 0;
+  line-height: 1.5;
+}
+
+.wish-price,
+.wish-groups {
+  color: var(--muted);
 }
 
 .optional,

@@ -9,6 +9,8 @@ import {
   sessions,
   users,
   webauthnCeremonies,
+  wishGroups,
+  wishes,
   webauthnCredentials,
 } from "./schema";
 
@@ -123,6 +125,42 @@ describe("auth schema security constraints", () => {
       ),
       false,
     );
+  });
+
+  it("models one wish with reusable many-to-many group assignments", () => {
+    const wishColumns = getTableConfig(wishes).columns.map(
+      (column) => column.name,
+    );
+    const wishGroupColumns = getTableConfig(wishGroups).columns.map(
+      (column) => column.name,
+    );
+    const wishGroupPrimaryKey = getTableConfig(wishGroups).primaryKeys;
+
+    assert.deepEqual(wishColumns, [
+      "id",
+      "owner_id",
+      "title",
+      "description",
+      "link",
+      "price_text",
+      "created_at",
+      "updated_at",
+    ]);
+    assert.deepEqual(wishGroupColumns, [
+      "wish_id",
+      "group_id",
+      "created_at",
+    ]);
+    assert.deepEqual(
+      wishGroupPrimaryKey[0]?.columns.map((column) => column.name),
+      ["wish_id", "group_id"],
+    );
+    assert.ok(indexNames(wishes).includes("wishes_owner_id_index"));
+    assert.ok(indexNames(wishGroups).includes("wish_groups_group_id_index"));
+    assert.ok(checkNames(wishes).includes("wishes_title_length_check"));
+    assert.ok(checkNames(wishes).includes("wishes_description_length_check"));
+    assert.ok(checkNames(wishes).includes("wishes_link_length_check"));
+    assert.ok(checkNames(wishes).includes("wishes_price_text_length_check"));
   });
 
   it("models ceremony expiry, consumption, bounded attempts, and binding", () => {
