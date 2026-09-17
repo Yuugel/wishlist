@@ -1,25 +1,14 @@
-import Link from "next/link";
 import { AccountPanel } from "../components/passkey-flows";
+import { AppShell } from "../components/app-shell";
 
 export default function AccountPage() {
   return (
-    <main className="shell">
-      <section className="card">
-        <p className="eyebrow">Wishlist</p>
-        <h1>Dein Konto</h1>
-        <AccountPanel />
-        <div className="actions">
-          <Link className="button-link" href="/wishlist">
-            Meine Wunschliste
-          </Link>
-          <Link className="button-link secondary" href="/groups">
-            Meine Gruppen
-          </Link>
-          <Link className="button-link secondary" href="/activity">
-            Activity
-          </Link>
-        </div>
-      </section>
-    </main>
+    <AppShell
+      eyebrow="Sicher bei dir"
+      title="Dein Konto"
+      description="Verwalte deine Passkeys und deine aktuelle Anmeldung."
+    >
+      <AccountPanel />
+    </AppShell>
   );
 }

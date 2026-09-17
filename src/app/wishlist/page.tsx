@@ -1,7 +1,11 @@
 import { WishlistPanel } from "../components/wishlist-panel";
+import { AppShell } from "../components/app-shell";
 
 type WishlistPageProps = {
-  searchParams: Promise<{ groupId?: string | string[] }>;
+  searchParams: Promise<{
+    groupId?: string | string[];
+    new?: string | string[];
+  }>;
 };
 
 export default async function WishlistPage({
@@ -11,17 +15,15 @@ export default async function WishlistPage({
   const groupId = Array.isArray(params.groupId)
     ? params.groupId[0]
     : params.groupId;
+  const openCreate = (Array.isArray(params.new) ? params.new[0] : params.new) === "1";
 
   return (
-    <main className="shell">
-      <section className="card wide-card">
-        <p className="eyebrow">Wishlist</p>
-        <h1>Meine Wunschliste</h1>
-        <p className="intro">
-          Private und gruppenzugeordnete Wünsche an einem Ort.
-        </p>
-        <WishlistPanel initialGroupId={groupId} />
-      </section>
-    </main>
+    <AppShell
+      eyebrow="Dein Wunschraum"
+      title="Meine Wunschliste"
+      description="Sammle, was dir Freude macht – privat für dich oder geteilt mit deinen Gruppen."
+    >
+      <WishlistPanel initialGroupId={groupId} initiallyOpen={openCreate} />
+    </AppShell>
   );
 }

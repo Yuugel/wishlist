@@ -1,23 +1,31 @@
 import Link from "next/link";
+import { AuthShell } from "../components/app-shell";
 import { LoginButton } from "../components/passkey-flows";
+import { safeReturnPath } from "../safe-return-path";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams: Promise<{ next?: string | string[] }>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const returnTo = safeReturnPath((await searchParams).next);
+  const signupHref = returnTo
+    ? `/signup?next=${encodeURIComponent(returnTo)}`
+    : "/signup";
+
   return (
-    <main className="shell">
-      <section className="card">
-        <p className="eyebrow">Wishlist</p>
-        <h1>Anmelden</h1>
-        <p className="intro">
-          Wähle einen Passkey auf diesem Gerät oder einem verbundenen Gerät aus.
-          Ein Benutzername ist nicht erforderlich.
-        </p>
-        <LoginButton />
-        <p className="status">
-          Noch kein Konto? <Link href="/signup">Konto erstellen</Link>
+    <AuthShell
+      title="Willkommen zurück"
+      description="Wähle einen Passkey auf diesem oder einem verbundenen Gerät. Ein Benutzername ist nicht nötig."
+      footer={
+        <p>
+          Noch kein Konto? <Link href={signupHref}>Konto erstellen</Link>
           <br />
           Passkeys verloren? <Link href="/recover">Konto wiederherstellen</Link>
         </p>
-      </section>
-    </main>
+      }
+    >
+      <LoginButton returnTo={returnTo} />
+    </AuthShell>
   );
 }

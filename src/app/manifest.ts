@@ -4,13 +4,13 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Wishlist",
     short_name: "Wishlist",
-    description: "Technische Grundlage für den Wishlist-MVP.",
+    description: "Der persönliche Ort für Wünsche, Gruppen und gut gehütete Überraschungen.",
     lang: "de",
     start_url: "/",
     scope: "/",
     display: "standalone",
-    background_color: "#f8fafc",
-    theme_color: "#0f172a",
+    background_color: "#fffaf4",
+    theme_color: "#fffaf4",
     icons: [
       {
         src: "/icon.svg",

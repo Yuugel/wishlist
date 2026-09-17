@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Wishlist",
-  description: "Technische Grundlage für den Wishlist-MVP.",
+  description: "Der persönliche Ort für Wünsche, Gruppen und gut gehütete Überraschungen.",
   applicationName: "Wishlist",
   manifest: "/manifest.webmanifest",
   icons: {
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0f172a",
+  themeColor: "#fffaf4",
 };
 
 export default function RootLayout({
@@ -22,7 +22,7 @@ export default function RootLayout({
   children: ReactNode;
 }>) {
   return (
-    <html lang="de">
+    <html lang="de" data-scroll-behavior="smooth">
       <body>{children}</body>
     </html>
   );

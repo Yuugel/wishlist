@@ -1,18 +1,25 @@
 import Link from "next/link";
+import { AuthShell } from "../components/app-shell";
 import { SignupForm } from "../components/passkey-flows";
+import { safeReturnPath } from "../safe-return-path";
 
-export default function SignupPage() {
+type SignupPageProps = {
+  searchParams: Promise<{ next?: string | string[] }>;
+};
+
+export default async function SignupPage({ searchParams }: SignupPageProps) {
+  const returnTo = safeReturnPath((await searchParams).next);
+  const loginHref = returnTo
+    ? `/login?next=${encodeURIComponent(returnTo)}`
+    : "/login";
+
   return (
-    <main className="shell">
-      <section className="card">
-        <p className="eyebrow">Wishlist</p>
-        <h1>Konto erstellen</h1>
-        <p className="intro">
-          Du brauchst kein Passwort. Dein Anzeigename und ein Passkey genügen.
-        </p>
-        <SignupForm />
-        <p className="status">Schon registriert? <Link href="/login">Anmelden</Link></p>
-      </section>
-    </main>
+    <AuthShell
+      title="Dein Wunschraum wartet"
+      description="Kein Passwort, kein Pflicht-Postfach. Dein Anzeigename und ein sicherer Passkey genügen."
+      footer={<p>Schon registriert? <Link href={loginHref}>Anmelden</Link></p>}
+    >
+      <SignupForm returnTo={returnTo} />
+    </AuthShell>
   );
 }

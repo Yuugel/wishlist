@@ -1,4 +1,5 @@
 import { GroupsPanel } from "../components/groups-panel";
+import { AppShell } from "../components/app-shell";
 
 type GroupsPageProps = {
   searchParams: Promise<{ leave?: string }>;
@@ -9,16 +10,12 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
   const leaveResult = leave === "left" || leave === "dissolved" ? leave : undefined;
 
   return (
-    <main className="shell">
-      <section className="card wide-card">
-        <p className="eyebrow">Wishlist</p>
-        <h1>Meine Gruppen</h1>
-        <p className="intro">
-          Öffne eine Gruppe, um ihre Mitglieder und die dort sichtbaren
-          Wünsche zu sehen.
-        </p>
-        <GroupsPanel leaveResult={leaveResult} />
-      </section>
-    </main>
+    <AppShell
+      eyebrow="Zusammen schenken"
+      title="Meine Gruppen"
+      description="Eure gemeinsamen Räume für Wünsche, Vorfreude und gut gehütete Überraschungen."
+    >
+      <GroupsPanel leaveResult={leaveResult} />
+    </AppShell>
   );
 }

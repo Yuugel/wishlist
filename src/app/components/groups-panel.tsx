@@ -2,101 +2,188 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 
-type ApiGroup = {
-  id: string;
-  name: string;
-  createdAt: string;
-};
+type ApiGroup = { id: string; name: string; createdAt: string };
+type Feedback = { tone: "success" | "error"; text: string };
 
-export function GroupsPanel({
-  leaveResult,
-}: {
-  leaveResult?: "left" | "dissolved";
-}) {
+export function GroupsPanel({ leaveResult }: { leaveResult?: "left" | "dissolved" }) {
   const router = useRouter();
   const [groups, setGroups] = useState<ApiGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<string | undefined>(() => {
+  const [creating, setCreating] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [name, setName] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [feedback, setFeedback] = useState<Feedback | undefined>(() => {
     if (leaveResult === "dissolved") {
-      return "Du hast die Gruppe verlassen. Die Gruppe wurde dabei aufgelöst.";
+      return { tone: "success", text: "Du hast die Gruppe verlassen. Weil nur eine Person übrig war, wurde die Gruppe aufgelöst." };
     }
-    return leaveResult === "left" ? "Du hast die Gruppe verlassen." : undefined;
+    return leaveResult === "left"
+      ? { tone: "success", text: "Du hast die Gruppe verlassen." }
+      : undefined;
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const response = await fetch("/api/groups", {
-          credentials: "same-origin",
-          cache: "no-store",
-        });
-        const data = (await response.json().catch(() => ({}))) as {
-          groups?: ApiGroup[];
-          message?: string;
-        };
-        if (!response.ok) {
-          if (response.status === 401) {
-            router.replace("/login");
-            return;
-          }
-          throw new Error(data.message || "Die Gruppen konnten nicht geladen werden.");
+  const loadGroups = useCallback(async (signal: AbortSignal) => {
+    try {
+      const response = await fetch("/api/groups", {
+        credentials: "same-origin",
+        cache: "no-store",
+        signal,
+      });
+      const data = (await response.json().catch(() => ({}))) as { groups?: ApiGroup[]; message?: string };
+      if (!response.ok) {
+        if (response.status === 401) {
+          router.replace("/login");
+          return;
         }
-        if (!cancelled) setGroups(data.groups ?? []);
-      } catch (error) {
-        if (!cancelled) {
-          setMessage(
-            error instanceof Error
-              ? error.message
-              : "Die Gruppen konnten nicht geladen werden.",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+        throw new Error(data.message || "Die Gruppen konnten nicht geladen werden.");
       }
+      setGroups(data.groups ?? []);
+    } catch (error) {
+      if (signal.aborted) return;
+      setFeedback({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Die Gruppen konnten nicht geladen werden.",
+      });
+    } finally {
+      if (!signal.aborted) setLoading(false);
     }
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
   }, [router]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => void loadGroups(controller.signal), 0);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [loadGroups, reloadKey]);
+
+  async function createGroup(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setCreating(true);
+    setFeedback(undefined);
+    try {
+      const response = await fetch("/api/groups", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = (await response.json().catch(() => ({}))) as { group?: ApiGroup; error?: string; message?: string };
+      if (response.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      if (!response.ok || !data.group) {
+        throw new Error(
+          data.error === "invalid_group_name"
+            ? "Bitte gib einen Gruppennamen mit höchstens 200 Zeichen ein."
+            : data.message || "Die Gruppe konnte nicht erstellt werden.",
+        );
+      }
+      const createdGroup = data.group;
+      setGroups((current) => [createdGroup, ...current]);
+      setName("");
+      setShowCreate(false);
+      setFeedback({ tone: "success", text: `„${createdGroup.name}“ ist bereit. Du kannst die Gruppe jetzt öffnen und Menschen einladen.` });
+    } catch (error) {
+      setFeedback({
+        tone: "error",
+        text: error instanceof Error ? error.message : "Die Gruppe konnte nicht erstellt werden.",
+      });
+    } finally {
+      setCreating(false);
+    }
+  }
+
   return (
-    <div className="stack">
-      <div className="actions">
-        <Link className="button-link secondary" href="/wishlist">
-          Meine Wunschliste
-        </Link>
-        <Link className="button-link secondary" href="/activity">
-          Activity
-        </Link>
-        <Link className="button-link secondary" href="/account">
-          Konto
-        </Link>
+    <div className="content-stack">
+      <div className="section-toolbar">
+        <div>
+          <p className="section-kicker">Deine gemeinsamen Räume</p>
+          <p className="section-support">Jede Person darf Gruppen anlegen und in jeder Gruppe Einladungen teilen.</p>
+        </div>
+        <button
+          type="button"
+          className="button-with-icon"
+          onClick={() => {
+            setShowCreate((current) => !current);
+            setFeedback(undefined);
+          }}
+          aria-expanded={showCreate}
+          aria-controls="create-group-form"
+        >
+          <span aria-hidden="true">＋</span> Neue Gruppe
+        </button>
       </div>
 
-      {message && <p className="notice" role="alert">{message}</p>}
-      {loading ? (
-        <p className="intro">Gruppen werden geladen …</p>
-      ) : groups.length === 0 ? (
-        <p className="intro">
-          Du bist noch keiner Gruppe beigetreten. Sobald eine Gruppe vorhanden
-          ist, kannst du ihre Mitglieder und Wünsche hier öffnen.
+      {showCreate ? (
+        <form className="surface-form" id="create-group-form" onSubmit={createGroup}>
+          <div className="form-heading">
+            <div>
+              <p className="section-kicker">Neuer Gruppenraum</p>
+              <h2>Wie soll eure Gruppe heißen?</h2>
+            </div>
+            <button className="icon-button" type="button" onClick={() => setShowCreate(false)} aria-label="Formular schließen">×</button>
+          </div>
+          <label>
+            Gruppenname
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              required
+              maxLength={200}
+              autoFocus
+              placeholder="Zum Beispiel Familie oder Lieblingsmenschen"
+            />
+          </label>
+          <p className="hint">Alle Mitglieder sind gleichberechtigt und dürfen später weitere Personen einladen.</p>
+          <div className="actions">
+            <button type="submit" disabled={creating || name.trim().length === 0}>
+              {creating ? "Gruppe wird erstellt …" : "Gruppe erstellen"}
+            </button>
+            <button className="secondary" type="button" onClick={() => setShowCreate(false)} disabled={creating}>Abbrechen</button>
+          </div>
+        </form>
+      ) : null}
+
+      {feedback ? (
+        <p className={`notice notice-${feedback.tone}`} role={feedback.tone === "error" ? "alert" : "status"}>
+          {feedback.text}
         </p>
+      ) : null}
+
+      {loading ? (
+        <div className="loading-grid" aria-label="Gruppen werden geladen" aria-live="polite">
+          <div className="skeleton-card" /><div className="skeleton-card" />
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="empty-state">
+          <span className="empty-state-icon" aria-hidden="true">♡</span>
+          <h2>Hier darf etwas Gemeinsames entstehen</h2>
+          <p>Lege eure erste Gruppe an. Danach kannst du direkt einen sicheren Einladungslink teilen.</p>
+          <button type="button" onClick={() => setShowCreate(true)}>Erste Gruppe erstellen</button>
+        </div>
       ) : (
-        <div className="group-list">
-          {groups.map((group) => (
-            <Link className="group-link" href={`/groups/${group.id}`} key={group.id}>
-              <strong>{group.name}</strong>
-              <span>Gruppe öffnen</span>
+        <div className="group-grid">
+          {groups.map((group, index) => (
+            <Link className="group-card" href={`/groups/${group.id}`} key={group.id}>
+              <span className={`group-card-symbol tone-${(index % 3) + 1}`} aria-hidden="true">{group.name.slice(0, 1).toLocaleUpperCase("de-DE")}</span>
+              <span className="group-card-copy">
+                <strong>{group.name}</strong>
+                <small>Wünsche und Mitglieder ansehen</small>
+              </span>
+              <span className="group-card-arrow" aria-hidden="true">→</span>
             </Link>
           ))}
         </div>
       )}
+
+      {!loading && feedback?.tone === "error" ? (
+        <button className="text-button" type="button" onClick={() => { setLoading(true); setReloadKey((value) => value + 1); }}>Erneut laden</button>
+      ) : null}
     </div>
   );
 }

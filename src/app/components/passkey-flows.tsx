@@ -52,8 +52,10 @@ function RecoveryCodeNotice(input: {
   onContinue: () => void;
 }) {
   return (
-    <div className="stack">
-      <p className="notice" role="status">
+    <div className="recovery-notice">
+      <span className="recovery-symbol" aria-hidden="true">✦</span>
+      <h2>Dein Sicherheitscode</h2>
+      <p className="notice notice-info" role="status">
         Speichere diesen neuen Recovery-Code jetzt sicher. Er wird nur dieses
         eine Mal vollständig angezeigt.
       </p>
@@ -65,7 +67,7 @@ function RecoveryCodeNotice(input: {
   );
 }
 
-export function SignupForm() {
+export function SignupForm({ returnTo }: { returnTo?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -105,26 +107,26 @@ export function SignupForm() {
         recoveryCode={recoveryCode}
         onContinue={() => {
           setRecoveryCode(undefined);
-          router.replace("/account");
+          router.replace(returnTo ?? "/account");
         }}
       />
     );
   }
 
   return (
-    <form className="stack" onSubmit={submit}>
+    <form className="auth-form" onSubmit={submit}>
       <label>
         Anzeigename
-        <input name="displayName" required maxLength={200} autoComplete="name" />
+        <input name="displayName" required maxLength={200} autoComplete="name" placeholder="Wie dürfen wir dich nennen?" />
       </label>
       <label>
         E-Mail <span className="optional">(optional)</span>
-        <input name="email" type="email" maxLength={320} autoComplete="email" />
+        <input name="email" type="email" maxLength={320} autoComplete="email" placeholder="du@beispiel.de" />
       </label>
       <button type="submit" disabled={busy}>
         {busy ? "Passkey wird eingerichtet …" : "Konto mit Passkey erstellen"}
       </button>
-      {message && <p className="notice" role="alert">{message}</p>}
+      {message && <p className="notice notice-error" role="alert">{message}</p>}
     </form>
   );
 }
@@ -195,7 +197,7 @@ export function RecoveryForm() {
 
   if (ceremony) {
     return (
-      <div className="stack">
+      <div className="auth-form">
         <button
           type="button"
           disabled={busy}
@@ -207,13 +209,13 @@ export function RecoveryForm() {
           Du kannst einen im Browser abgebrochenen Versuch innerhalb der kurzen
           Laufzeit erneut starten. Lade die Seite nicht neu.
         </p>
-        {message && <p className="notice" role="alert">{message}</p>}
+        {message && <p className="notice notice-error" role="alert">{message}</p>}
       </div>
     );
   }
 
   return (
-    <form className="stack" onSubmit={claim}>
+    <form className="auth-form" onSubmit={claim}>
       <label>
         Recovery-Code
         <input
@@ -232,12 +234,12 @@ export function RecoveryForm() {
       <button type="submit" disabled={busy}>
         {busy ? "Recovery-Code wird geprüft …" : "Neuen Passkey registrieren"}
       </button>
-      {message && <p className="notice" role="alert">{message}</p>}
+      {message && <p className="notice notice-error" role="alert">{message}</p>}
     </form>
   );
 }
 
-export function LoginButton() {
+export function LoginButton({ returnTo }: { returnTo?: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
@@ -255,7 +257,7 @@ export function LoginButton() {
         ceremonyId: ceremony.ceremonyId,
         response,
       });
-      router.push("/account");
+      router.push(returnTo ?? "/account");
     } catch (error) {
       setMessage(browserMessage(error));
       setBusy(false);
@@ -263,11 +265,11 @@ export function LoginButton() {
   }
 
   return (
-    <div className="stack">
+    <div className="auth-form">
       <button type="button" onClick={login} disabled={busy}>
         {busy ? "Passkey wird geprüft …" : "Mit Passkey anmelden"}
       </button>
-      {message && <p className="notice" role="alert">{message}</p>}
+      {message && <p className="notice notice-error" role="alert">{message}</p>}
     </div>
   );
 }
@@ -335,23 +337,48 @@ export function AccountPanel() {
   }
 
   return (
-    <div className="stack">
-      <p className="intro">
-        {account
-          ? <>Angemeldet als <strong>{account.displayName}</strong>. Registrierte Passkeys: {account.passkeyCount}.</>
-          : "Konto wird geladen …"}
-      </p>
-      <button type="button" onClick={addPasskey} disabled={busy || !account}>
-        Zusätzlichen Passkey registrieren
-      </button>
-      <button className="secondary" type="button" onClick={logout} disabled={busy}>
-        Abmelden
-      </button>
-      <p className="hint">
-        Das Hinzufügen ist nur kurz nach einer Anmeldung möglich. Melde dich bei
-        entsprechender Aufforderung ab und erneut an.
-      </p>
-      {message && <p className="notice" role="status">{message}</p>}
+    <div className="account-layout">
+      <section className="profile-card">
+        {account ? (
+          <>
+            <div className="profile-avatar" aria-hidden="true">{account.displayName.slice(0, 1).toLocaleUpperCase("de-DE")}</div>
+            <div className="profile-copy">
+              <p className="section-kicker">Angemeldet als</p>
+              <h2>{account.displayName}</h2>
+              <span className="security-badge">Passkey-geschützt</span>
+            </div>
+          </>
+        ) : (
+          <div className="profile-loading" aria-label="Konto wird geladen" aria-live="polite"><span /><span /></div>
+        )}
+      </section>
+
+      {message ? <p className={`notice ${message.includes("gespeichert") ? "notice-success" : "notice-error"}`} role="status">{message}</p> : null}
+
+      <section className="settings-card" aria-labelledby="passkeys-heading">
+        <div className="settings-icon" aria-hidden="true">⌁</div>
+        <div className="settings-copy">
+          <div className="settings-heading-row">
+            <div><p className="section-kicker">Sicher anmelden</p><h3 id="passkeys-heading">Deine Passkeys</h3></div>
+            {account ? <span className="count-badge">{account.passkeyCount}</span> : null}
+          </div>
+          <p>Hinterlege einen weiteren Passkey für ein zusätzliches Gerät. So bleibt dein Konto leichter erreichbar.</p>
+          <button type="button" onClick={addPasskey} disabled={busy || !account}>
+            {busy ? "Passkey wird eingerichtet …" : "Weiteren Passkey hinzufügen"}
+          </button>
+          <p className="hint">Das Hinzufügen ist nur kurz nach einer Anmeldung möglich. Melde dich bei einer entsprechenden Aufforderung erneut an.</p>
+        </div>
+      </section>
+
+      <section className="settings-card quiet-settings" aria-labelledby="session-heading">
+        <div className="settings-icon" aria-hidden="true">→</div>
+        <div className="settings-copy">
+          <p className="section-kicker">Dieses Gerät</p>
+          <h3 id="session-heading">Aktuelle Sitzung</h3>
+          <p>Beende die Anmeldung auf diesem Gerät, wenn du es nicht mehr verwendest.</p>
+          <button className="secondary" type="button" onClick={logout} disabled={busy}>Abmelden</button>
+        </div>
+      </section>
     </div>
   );
 }
