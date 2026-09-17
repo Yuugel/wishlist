@@ -15,6 +15,13 @@
       "when": 1789619552596,
       "tag": "0001_lovely_norrin_radd",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789624981589,
+      "tag": "0002_talented_hardball",
+      "breakpoints": true
     }
   ]
 }

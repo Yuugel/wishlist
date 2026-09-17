@@ -8,6 +8,7 @@ import {
   integer,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -74,6 +75,70 @@ export const users = pgTable(
     check(
       "users_email_pair_check",
       sql`(${table.email} is null and ${table.emailNormalized} is null) or (${table.email} is not null and ${table.emailNormalized} is not null)`,
+    ),
+  ],
+);
+
+export const groups = pgTable(
+  "groups",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 200 }).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    check(
+      "groups_name_length_check",
+      sql`char_length(btrim(${table.name})) between 1 and 200`,
+    ),
+  ],
+);
+
+export const groupMemberships = pgTable(
+  "group_memberships",
+  {
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "group_memberships_group_id_user_id_pk",
+      columns: [table.groupId, table.userId],
+    }),
+    index("group_memberships_user_id_index").on(table.userId),
+  ],
+);
+
+export const groupInvites = pgTable(
+  "group_invites",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+    selector: varchar("selector", { length: 22 }).notNull(),
+    digest: bytea("digest").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("group_invites_selector_unique").on(table.selector),
+    index("group_invites_group_id_index").on(table.groupId),
+    index("group_invites_expires_at_index").on(table.expiresAt),
+    check(
+      "group_invites_digest_length_check",
+      sql`octet_length(${table.digest}) = 32`,
+    ),
+    check(
+      "group_invites_expiry_check",
+      sql`${table.expiresAt} > ${table.createdAt}`,
     ),
   ],
 );
