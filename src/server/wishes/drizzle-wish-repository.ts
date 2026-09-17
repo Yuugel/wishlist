@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { createWishChangedActivity } from "../activity/activity-service";
 import { insertWishChangedActivity } from "../activity/drizzle-activity-repository";
 import { db } from "../db/client";
@@ -347,7 +347,12 @@ export const drizzleWishRepository: WishRepository = {
           status: wishTakeovers.status,
         })
         .from(wishTakeovers)
-        .where(eq(wishTakeovers.wishId, input.wishId))
+        .where(
+          and(
+            eq(wishTakeovers.wishId, input.wishId),
+            ne(wishTakeovers.takerId, input.ownerId),
+          ),
+        )
         .for("update")
         .limit(1);
       if (activeTakeover) {
