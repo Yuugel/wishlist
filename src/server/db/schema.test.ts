@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { getTableConfig } from "drizzle-orm/pg-core";
 import {
+  groupInvites,
+  groupMemberships,
+  groups,
   recoveryCodes,
   sessions,
   users,
@@ -62,6 +65,64 @@ describe("auth schema security constraints", () => {
       ),
     );
     assert.ok(checkNames(recoveryCodes).includes("recovery_codes_state_check"));
+  });
+
+  it("models flat group membership and hashed invite storage", () => {
+    const groupColumns = getTableConfig(groups).columns.map(
+      (column) => column.name,
+    );
+    const membershipColumns = getTableConfig(groupMemberships).columns.map(
+      (column) => column.name,
+    );
+    const inviteColumns = getTableConfig(groupInvites).columns.map(
+      (column) => column.name,
+    );
+    const membershipPrimaryKey = getTableConfig(groupMemberships).primaryKeys;
+
+    assert.deepEqual(groupColumns, [
+      "id",
+      "name",
+      "created_at",
+      "updated_at",
+    ]);
+    assert.deepEqual(membershipColumns, ["group_id", "user_id", "created_at"]);
+    assert.deepEqual(inviteColumns, [
+      "id",
+      "group_id",
+      "selector",
+      "digest",
+      "expires_at",
+      "created_at",
+      "updated_at",
+    ]);
+    assert.equal(inviteColumns.includes("token"), false);
+    assert.equal(inviteColumns.includes("secret"), false);
+    assert.deepEqual(
+      membershipPrimaryKey[0]?.columns.map((column) => column.name),
+      ["group_id", "user_id"],
+    );
+    assert.ok(
+      indexNames(groupMemberships).includes(
+        "group_memberships_user_id_index",
+      ),
+    );
+    assert.ok(
+      indexNames(groupInvites).includes("group_invites_selector_unique"),
+    );
+    assert.ok(
+      indexNames(groupInvites).includes("group_invites_expires_at_index"),
+    );
+    assert.ok(checkNames(groups).includes("groups_name_length_check"));
+    assert.ok(
+      checkNames(groupInvites).includes("group_invites_digest_length_check"),
+    );
+    assert.ok(checkNames(groupInvites).includes("group_invites_expiry_check"));
+    assert.equal(
+      [...groupColumns, ...membershipColumns, ...inviteColumns].some(
+        (name) => name === "owner_id" || name === "role",
+      ),
+      false,
+    );
   });
 
   it("models ceremony expiry, consumption, bounded attempts, and binding", () => {
