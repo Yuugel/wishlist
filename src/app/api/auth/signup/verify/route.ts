@@ -15,7 +15,10 @@ export async function POST(request: NextRequest) {
       userId: result.userId,
       previousToken: sessionTokenFromRequest(request),
     });
-    const response = NextResponse.json({ ok: true });
+    const response = NextResponse.json(
+      { ok: true, recoveryCode: result.recoveryCode },
+      { headers: { "Cache-Control": "no-store" } },
+    );
     response.cookies.set(issuedSessionCookie(session.token, session.absoluteExpiresAt));
     return response;
   } catch (error) {

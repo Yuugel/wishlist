@@ -42,7 +42,9 @@ PWA-Basis.
    <http://localhost:3000/api/health> und liefert nur `{ "status": "ok" }`.
    Unter <http://localhost:3000/signup> kann ein Konto mit Anzeigename und
    Passkey erstellt werden; <http://localhost:3000/login> bietet den
-   username-losen Passkey-Login.
+   username-losen Passkey-Login. Der bei der Erstellung einmalig angezeigte
+   Recovery-Code kann unter <http://localhost:3000/recover> zum sicheren Ersatz
+   verlorener Passkeys verwendet werden.
 
 ## Build und Produktion lokal prüfen
 
@@ -84,13 +86,13 @@ Hosting-Umgebung, niemals in Git.
 
 - `src/app/` – App-Router-Seiten, Layout, Manifest und Route Handler
 - `src/server/db/` – Node.js-only Datenbank-Client und Drizzle-Schema
-- `src/server/auth/` – serverseitige Passkey-, Ceremony- und Sessionlogik
+- `src/server/auth/` – serverseitige Passkey-, Recovery-, Ceremony- und Sessionlogik
 - `src/server/groups/` – server-only Gruppen-Domain, Repository und Invite-Token
 - `public/` – statische Assets, derzeit das Manifest-Icon
 - `spikes/passkey-first-auth/` – isolierter Passkey-/Recovery-Spike; nicht Teil
   des Produktionscodes
 
 Das Manifest und die Metadata bereiten eine spätere Installation vor. Offline-
-Caching, Push und ein Service Worker sind bewusst nicht enthalten. Der
-Recovery-Wiederherstellungsflow und fachliche Wishlist-Funktionen folgen in
-separaten Tickets.
+Caching, Push und ein Service Worker sind bewusst nicht enthalten. Die
+Recovery-Semantik einschließlich Abbruch, Ablauf und Credential-Widerruf ist in
+[`docs/recovery.md`](docs/recovery.md) dokumentiert.

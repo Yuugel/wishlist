@@ -24,6 +24,10 @@ import {
   isFreshAuthentication,
   storedChallengeMatcher,
 } from "./passkey-policy";
+import {
+  insertPreparedRecoveryCode,
+  prepareRecoveryCode,
+} from "./recovery-service";
 import type { ResolvedSession } from "./session-service";
 import { hashWebAuthnChallenge, isWebAuthnCeremonyUsable } from "./webauthn-ceremony";
 
@@ -239,6 +243,7 @@ export async function finishSignup(value: unknown, now = new Date()) {
 
   const info = verification.registrationInfo;
   const credentialID = parseCredentialID(info.credential.id);
+  const recoveryCode = prepareRecoveryCode();
 
   try {
     return await db.transaction(async (tx) => {
@@ -282,7 +287,11 @@ export async function finishSignup(value: unknown, now = new Date()) {
         createdAt: now,
         updatedAt: now,
       });
-      return { userId: user.id };
+      await insertPreparedRecoveryCode(tx, user.id, recoveryCode, now);
+      return {
+        userId: user.id,
+        recoveryCode: recoveryCode.displayCode,
+      };
     });
   } catch (error) {
     if (error instanceof AuthError) throw error;

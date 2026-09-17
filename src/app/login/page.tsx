@@ -12,7 +12,11 @@ export default function LoginPage() {
           Ein Benutzername ist nicht erforderlich.
         </p>
         <LoginButton />
-        <p className="status">Noch kein Konto? <Link href="/signup">Konto erstellen</Link></p>
+        <p className="status">
+          Noch kein Konto? <Link href="/signup">Konto erstellen</Link>
+          <br />
+          Passkeys verloren? <Link href="/recover">Konto wiederherstellen</Link>
+        </p>
       </section>
     </main>
   );

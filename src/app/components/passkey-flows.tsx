@@ -11,6 +11,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 type Ceremony<T> = { ceremonyId: string; options: T };
 type ApiError = { message?: string };
+type RecoveryResult = { ok: true; recoveryCode: string };
 
 async function requestJson<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(path, {
@@ -46,10 +47,29 @@ function ensureWebAuthn(): void {
   }
 }
 
+function RecoveryCodeNotice(input: {
+  recoveryCode: string;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="stack">
+      <p className="notice" role="status">
+        Speichere diesen neuen Recovery-Code jetzt sicher. Er wird nur dieses
+        eine Mal vollständig angezeigt.
+      </p>
+      <code className="recovery-code">{input.recoveryCode}</code>
+      <button type="button" onClick={input.onContinue}>
+        Ich habe den Code sicher gespeichert
+      </button>
+    </div>
+  );
+}
+
 export function SignupForm() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string>();
+  const [recoveryCode, setRecoveryCode] = useState<string>();
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -65,15 +85,30 @@ export function SignupForm() {
         email: form.get("email"),
       });
       const response = await startRegistration({ optionsJSON: ceremony.options });
-      await requestJson("/api/auth/signup/verify", {
-        ceremonyId: ceremony.ceremonyId,
-        response,
-      });
-      router.push("/account");
+      const result = await requestJson<RecoveryResult>(
+        "/api/auth/signup/verify",
+        {
+          ceremonyId: ceremony.ceremonyId,
+          response,
+        },
+      );
+      setRecoveryCode(result.recoveryCode);
     } catch (error) {
       setMessage(browserMessage(error));
       setBusy(false);
     }
+  }
+
+  if (recoveryCode) {
+    return (
+      <RecoveryCodeNotice
+        recoveryCode={recoveryCode}
+        onContinue={() => {
+          setRecoveryCode(undefined);
+          router.replace("/account");
+        }}
+      />
+    );
   }
 
   return (
@@ -88,6 +123,114 @@ export function SignupForm() {
       </label>
       <button type="submit" disabled={busy}>
         {busy ? "Passkey wird eingerichtet …" : "Konto mit Passkey erstellen"}
+      </button>
+      {message && <p className="notice" role="alert">{message}</p>}
+    </form>
+  );
+}
+
+export function RecoveryForm() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string>();
+  const [ceremony, setCeremony] = useState<
+    Ceremony<StartRegistrationOpts["optionsJSON"]>
+  >();
+  const [recoveryCode, setRecoveryCode] = useState<string>();
+
+  async function register(
+    current: Ceremony<StartRegistrationOpts["optionsJSON"]>,
+  ) {
+    setBusy(true);
+    setMessage(undefined);
+    try {
+      const response = await startRegistration({
+        optionsJSON: current.options,
+      });
+      const result = await requestJson<RecoveryResult>(
+        "/api/auth/recovery/verify",
+        { ceremonyId: current.ceremonyId, response },
+      );
+      setCeremony(undefined);
+      setRecoveryCode(result.recoveryCode);
+    } catch (error) {
+      setMessage(browserMessage(error));
+      setBusy(false);
+    }
+  }
+
+  async function claim(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(undefined);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
+    try {
+      ensureWebAuthn();
+      const current = await requestJson<
+        Ceremony<StartRegistrationOpts["optionsJSON"]>
+      >("/api/auth/recovery/options", {
+        recoveryCode: form.get("recoveryCode"),
+      });
+      formElement.reset();
+      setCeremony(current);
+      await register(current);
+    } catch (error) {
+      setMessage(browserMessage(error));
+      setBusy(false);
+    }
+  }
+
+  if (recoveryCode) {
+    return (
+      <RecoveryCodeNotice
+        recoveryCode={recoveryCode}
+        onContinue={() => {
+          setRecoveryCode(undefined);
+          router.replace("/account");
+        }}
+      />
+    );
+  }
+
+  if (ceremony) {
+    return (
+      <div className="stack">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void register(ceremony)}
+        >
+          {busy ? "Passkey wird registriert …" : "Passkey erneut registrieren"}
+        </button>
+        <p className="hint">
+          Du kannst einen im Browser abgebrochenen Versuch innerhalb der kurzen
+          Laufzeit erneut starten. Lade die Seite nicht neu.
+        </p>
+        {message && <p className="notice" role="alert">{message}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <form className="stack" onSubmit={claim}>
+      <label>
+        Recovery-Code
+        <input
+          name="recoveryCode"
+          required
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+        />
+      </label>
+      <p className="hint">
+        Nach dem Fortfahren wird der Code exklusiv für diesen kurzlebigen
+        Vorgang reserviert. Bei Ablauf wird er aus Sicherheitsgründen
+        verbraucht. Prüfe vorher, dass dein Browser Passkeys unterstützt.
+      </p>
+      <button type="submit" disabled={busy}>
+        {busy ? "Recovery-Code wird geprüft …" : "Neuen Passkey registrieren"}
       </button>
       {message && <p className="notice" role="alert">{message}</p>}
     </form>

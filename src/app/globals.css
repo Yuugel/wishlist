@@ -149,3 +149,13 @@ button:disabled {
   background: #eff6ff;
   color: #1e3a8a;
 }
+
+.recovery-code {
+  overflow-wrap: anywhere;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--background);
+  font-size: 1rem;
+  user-select: all;
+}

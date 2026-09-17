@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --conditions=react-server --import tsx --test src/server/auth/passkey-policy.test.ts src/server/auth/recovery-code.test.ts src/server/auth/request-security.test.ts src/server/auth/session-cookie.test.ts src/server/auth/session-token.test.ts src/server/auth/webauthn-ceremony.test.ts src/server/db/schema.test.ts src/server/groups/invite-token.test.ts src/server/groups/group-service.test.ts",
+    "test": "node --conditions=react-server --import tsx --test src/server/auth/passkey-policy.test.ts src/server/auth/recovery-code.test.ts src/server/auth/recovery-cookie.test.ts src/server/auth/recovery-policy.test.ts src/server/auth/recovery-rate-limit.test.ts src/server/auth/request-security.test.ts src/server/auth/session-cookie.test.ts src/server/auth/session-token.test.ts src/server/auth/webauthn-ceremony.test.ts src/server/db/schema.test.ts src/server/groups/invite-token.test.ts src/server/groups/group-service.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push"
