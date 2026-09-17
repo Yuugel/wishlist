@@ -20,6 +20,8 @@ export type WishSafeViewFields = {
  */
 export type OwnerWishView = WishSafeViewFields & {
   audience: "owner";
+  /** Safe in the owner's personal response; never included in viewer views. */
+  ownerId: string;
   groups: GroupSummary[];
 };
 
@@ -54,6 +56,7 @@ export function toOwnerWishView(wish: WishRecord): OwnerWishView {
   return {
     ...safeFields(wish),
     audience: "owner",
+    ownerId: wish.ownerId,
     groups: wish.groups.map((group) => ({ ...group })),
   };
 }
@@ -94,6 +97,7 @@ export function serializeOwnerWishView(view: OwnerWishView) {
   return {
     view: view.audience,
     ...serializeSafeFields(view),
+    ownerId: view.ownerId,
     groups: view.groups.map(serializeGroup),
   };
 }

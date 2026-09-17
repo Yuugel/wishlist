@@ -39,14 +39,14 @@ describe("wish view boundaries", () => {
     assert.equal(owner.audience, "owner");
     assert.equal(groupOwner.audience, "owner");
     assert.equal(viewer.audience, "viewer");
-    assert.equal("ownerId" in owner, false);
+    assert.equal(owner.ownerId, "alice");
     assert.equal("ownerId" in viewer, false);
     assert.equal("reservation" in owner, false);
     assert.equal("reservation" in viewer, false);
     assert.deepEqual(serializedOwner.groups, [
       { id: "group-a", name: "A", createdAt: now.toISOString() },
     ]);
-    assert.equal("ownerId" in serializedOwner, false);
+    assert.equal(serializedOwner.ownerId, "alice");
     assert.equal("groups" in serializedViewer, false);
     assert.equal("reservation" in serializedViewer, false);
   });
