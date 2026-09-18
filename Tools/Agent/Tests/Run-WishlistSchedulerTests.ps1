@@ -315,6 +315,28 @@ function Get-TestTextSha256 {
 }
 
 try {
+    $capacityState = New-TestScheduler -Name 'capacity-state' -MaxWorkers 3
+    $capacityProperty = $capacityState.State.PSObject.Properties['MaxWorkers']
+    Assert-True -Condition ($null -ne $capacityProperty) -Name 'scheduler state exposes configured MaxWorkers'
+    Assert-Equal -Actual $(if ($null -eq $capacityProperty) { $null } else { [int]$capacityProperty.Value }) -Expected 3 -Name 'scheduler state uses configured MaxWorkers'
+    $persistedCapacityState = Get-Content -LiteralPath $capacityState.StatePath -Raw | ConvertFrom-Json
+    $persistedCapacityProperty = $persistedCapacityState.PSObject.Properties['MaxWorkers']
+    Assert-True -Condition ($null -ne $persistedCapacityProperty) -Name 'scheduler persists configured MaxWorkers'
+    Assert-Equal -Actual $(if ($null -eq $persistedCapacityProperty) { $null } else { [int]$persistedCapacityProperty.Value }) -Expected 3 -Name 'persisted MaxWorkers matches configured capacity'
+
+    $legacyCapacity = New-TestScheduler -Name 'capacity-legacy' -MaxWorkers 2
+    $legacyDocument = Get-Content -LiteralPath $legacyCapacity.StatePath -Raw | ConvertFrom-Json
+    $legacyDocument.PSObject.Properties.Remove('MaxWorkers')
+    $legacyDocument | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $legacyCapacity.StatePath -Encoding UTF8
+    $reloadedCapacity = New-TestScheduler -Name 'capacity-legacy' -MaxWorkers 5
+    $reloadedCapacityProperty = $reloadedCapacity.State.PSObject.Properties['MaxWorkers']
+    Assert-True -Condition ($null -ne $reloadedCapacityProperty) -Name 'legacy state without MaxWorkers adopts runtime capacity'
+    Assert-Equal -Actual $(if ($null -eq $reloadedCapacityProperty) { $null } else { [int]$reloadedCapacityProperty.Value }) -Expected 5 -Name 'legacy state upgrade uses runtime MaxWorkers'
+    $reloadedDocument = Get-Content -LiteralPath $reloadedCapacity.StatePath -Raw | ConvertFrom-Json
+    $reloadedDocumentProperty = $reloadedDocument.PSObject.Properties['MaxWorkers']
+    Assert-True -Condition ($null -ne $reloadedDocumentProperty) -Name 'legacy state upgrade persists MaxWorkers'
+    Assert-Equal -Actual $(if ($null -eq $reloadedDocumentProperty) { $null } else { [int]$reloadedDocumentProperty.Value }) -Expected 5 -Name 'legacy persisted MaxWorkers matches runtime capacity'
+
     Invoke-Expression (Get-TestHostEnqueueFunctionText)
     $hostScheduler = New-TestScheduler -Name 'hotkey-enqueue-boundary'
     $hostText = New-TestTaskText -Ticket 1101 -Body 'Hotkey enqueue return-boundary regression.'
