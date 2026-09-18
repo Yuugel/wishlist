@@ -73,11 +73,14 @@ function Write-WishlistSchedulerJsonAtomic {
 }
 
 function New-WishlistSchedulerState {
+    param([ValidateRange(1, 16)][int]$MaxWorkers = 2)
+
     return [pscustomobject]@{
         SchemaVersion = $script:SchedulerSchemaVersion
         UpdatedUtc = (Get-Date).ToUniversalTime().ToString('o')
         ShutdownState = 'RUNNING'
         NextSequence = 1
+        MaxWorkers = $MaxWorkers
         Jobs = @()
         Workers = @()
     }
@@ -532,7 +535,7 @@ function New-WishlistScheduler {
     if ([string]::IsNullOrWhiteSpace($EnginePath)) { $EnginePath = Get-WishlistSchedulerEngine }
 
     $statePath = Join-Path $resolvedStateRoot 'state.json'
-    $state = New-WishlistSchedulerState
+    $state = New-WishlistSchedulerState -MaxWorkers $MaxWorkers
     if (Test-Path -LiteralPath $statePath -PathType Leaf) {
         try {
             $state = Get-Content -LiteralPath $statePath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
@@ -545,6 +548,8 @@ function New-WishlistScheduler {
             throw "Scheduler state '$statePath' is unreadable: $($_.Exception.Message)"
         }
     }
+
+    Set-WishlistSchedulerNoteProperty -Object $state -Name 'MaxWorkers' -Value $MaxWorkers
 
     $scheduler = [pscustomobject]@{
         StateRoot = $resolvedStateRoot
