@@ -1,5 +1,7 @@
 # Task handoff boundary
 
+> **Central Pi_Task cutover (2026-09-19):** The project-local host/scheduler path is retained for **legacy/rollback only**. Normal operation uses the central host at `C:\Users\hasan\Meine Projekte\Pi_Task Tool\Tools\Agent\Handoff\Start-PiTaskHost.ps1`. `Start-WishlistHandoffHotkey.ps1`, `Start-WishlistAgentHost.ps1`, `WishlistScheduler.psm1` and `Start-WishlistWorker.ps1` must not be started in parallel with the central host. The project-local parser, router, launcher, reporting, skills, and handoff adapter remain active integration points used by the central Core.
+
 The V1 handoff is intentionally explicit:
 
 ```text
