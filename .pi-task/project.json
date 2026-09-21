@@ -2,8 +2,10 @@
   "schemaVersion": 1,
   "projectId": "wishlist",
   "displayName": "Wishlist",
-  "aliases": ["Wishlist"],
-  "defaultBranch": "dev",
+  "aliases": [
+    "Wishlist"
+  ],
+  "defaultBranch": "feature/central-pi-task-profile",
   "instructions": "AGENTS.md",
   "skillsPath": ".agents/skills",
   "routingConfig": "Tools/Agent/Handoff/routing.json",
