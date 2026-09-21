@@ -7,7 +7,6 @@
   ],
   "defaultBranch": "feature/central-pi-task-profile",
   "instructions": "AGENTS.md",
-  "skillsPath": ".agents/skills",
   "routingConfig": "Tools/Agent/Handoff/routing.json",
   "handoffScript": "Tools/Agent/Handoff/Invoke-WishlistTask.ps1",
   "reportingRepository": "Yuugel/wishlist"
