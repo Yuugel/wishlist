@@ -12,6 +12,23 @@ clipboard or -Text -> marker check/parser -> TaskDefinition -> router -> PiLaunc
 
 Use `Invoke-WishlistTask.ps1` with no `-Apply` for a preview. Preview resolves the executable and expanded invocation shape but starts neither Pi nor a help probe. `-Apply` is the only live-launch request. Invalid/unmarked input and blocked routes never reach the launcher.
 
+## Pi_Task validation adapter
+
+`Tools/Validate-PiTask.ps1` is the project-owned validation adapter consumed by the central Pi_Task Core through `.pi-task/project.json`. It does not replace the central scheduler or revive the legacy Wishlist host.
+
+For `-Action test`, the adapter runs the existing deterministic Wishlist suites in fresh PowerShell processes:
+
+- `Tools/Agent/Tests/Run-WishlistHandoffTests.ps1`
+- `Tools/Agent/Tests/Run-WishlistSchedulerTests.ps1`
+
+Their existing `TOTAL / PASSED / FAILED` summaries are aggregated into the shared validation result contract. Assertion failures remain `FAIL`; launch/missing-summary/tooling failures remain `INFRA`; unsupported actions return `NOT_DISCOVERED`. `integration` honors the central `-DryRun` request and does not perform mutation or automatic integration.
+
+The adapter itself is covered by:
+
+~~~powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Tools\Agent\Tests\Run-WishlistValidationAdapterTests.ps1
+~~~
+
 The verified local contract is Pi 0.85.1 via the Windows `pi.cmd` entry point. `routing.json` passes the configured OpenAI Codex provider and real model ID with Pi's documented `--print`, `--mode json`, `--thinking`, `--session-id`, and `--approve` options. The task context is written to stdin because Pi's print mode explicitly merges piped stdin into the initial prompt. A live Apply re-probes `pi.cmd --help` before starting the process. JSON event output is parsed only according to Pi's documented event shape: the final assistant text is returned, and the latest provider-reported token/cost usage is shown when present. A JSON Apply is successful only when a valid session event and terminal `agent_end` event are observed; empty, malformed, truncated, or otherwise incomplete streams remain non-success even with process exit code 0. Missing or zero usage is diagnostic data, not a success gate, and no usage scraping or estimation is performed.
 
 ## Daily hotkey
