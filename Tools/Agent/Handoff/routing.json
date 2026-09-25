@@ -10,11 +10,7 @@
       "provider": "openai-codex",
       "launcherTarget": "gpt-6-luna",
       "thinking": "max",
-      "aliases": [
-        "luna",
-        "luna-max",
-        "luna max"
-      ],
+      "aliases": ["luna", "luna-max", "luna max"],
       "enabled": true,
       "guarded": false
     },
@@ -23,9 +19,7 @@
       "provider": "openai-codex",
       "launcherTarget": "gpt-6-sol",
       "thinking": "max",
-      "aliases": [
-        "sol"
-      ],
+      "aliases": ["sol"],
       "enabled": true,
       "guarded": false
     },
@@ -34,9 +28,7 @@
       "provider": "openai-codex",
       "launcherTarget": "gpt-6-astra",
       "thinking": "high",
-      "aliases": [
-        "astra"
-      ],
+      "aliases": ["astra"],
       "enabled": true,
       "guarded": true
     },
@@ -45,9 +37,7 @@
       "provider": "openai-codex",
       "launcherTarget": "gpt-5.6-terra",
       "thinking": "high",
-      "aliases": [
-        "terra"
-      ],
+      "aliases": ["terra"],
       "enabled": true,
       "guarded": false
     }
@@ -57,18 +47,9 @@
     "allowAutomatic": false
   },
   "phaseRoutes": {
-    "planning": {
-      "model": "sol",
-      "thinking": "max"
-    },
-    "implementing": {
-      "model": "luna",
-      "thinking": "max"
-    },
-    "qa": {
-      "model": "sol",
-      "thinking": "high"
-    }
+    "planning": { "model": "sol", "thinking": "max" },
+    "implementing": { "model": "luna", "thinking": "max" },
+    "qa": { "model": "sol", "thinking": "high" }
   },
   "automaticRoutes": [
     {
@@ -116,16 +97,12 @@
       "when": {
         "scope": "integration"
       },
-      "skills": [
-        "wishlist-integration-gate"
-      ]
+      "skills": ["wishlist-integration-gate"]
     },
     {
       "name": "feature-default",
       "when": {},
-      "skills": [
-        "wishlist-feature-delivery"
-      ]
+      "skills": ["wishlist-feature-delivery"]
     }
   ],
   "launcher": {
