@@ -9,5 +9,6 @@
   "instructions": "AGENTS.md",
   "routingConfig": "Tools/Agent/Handoff/routing.json",
   "handoffScript": "Tools/Agent/Handoff/Invoke-WishlistTask.ps1",
+  "validationScript": "Tools/Validate-PiTask.ps1",
   "reportingRepository": "Yuugel/wishlist"
 }
