@@ -1,23 +1,23 @@
-# Wishlist project rules
+# Wishlist repository instructions
 
-Wishlist is the local home for the project-specific Pi_Task handoff workflow. The application stack is not defined yet; do not invent application build, test, Unity, or release commands here.
+General user-level Codex rules come from `$CODEX_HOME/AGENTS.md` and are intentionally not repeated here.
 
-## Git safety
+## Project and branches
 
 - Repository: `Yuugel/wishlist`.
-- `main` is the protected release branch; `dev` is the integration branch.
-- Worker work starts from `origin/dev` on a normal clone and uses a unique `feature/*` or `fix/*` branch.
-- Do not use worktrees for parallel writing jobs. Keep worker clones for review; do not delete them automatically.
-- Do not merge, rebase, force-push, hard-reset, stash, or discard unrelated local changes. Automatic merges and recovery are not part of the workflow.
-- Run the check-only `Tools/Agent/integration-gate.ps1` before any explicitly authorized integration. Never mutate a remote as part of this local workflow.
+- Wishlist is currently the project-specific home for its Pi_Task handoff workflow; the application stack itself is not defined.
+- Do not invent application build, test, Unity, package or release commands before the product stack is explicitly chosen.
+- `main` is the release branch; `dev` is the active integration branch.
+- Worker work starts from `origin/dev` in a normal clone and uses a unique `feature/*` or `fix/*` branch.
+- Parallel writing workers use separate normal clones. Keep worker clones available for review/integration rather than deleting them immediately after commit/push.
+- Run the check-only `Tools/Agent/integration-gate.ps1` before an explicitly authorized integration.
 
 ## Pi_Task workflow
 
-- The project-local chain lives under `Tools/Agent/Handoff/`; the root launcher is `Start-WishlistPiTask.ps1`.
-- Runtime state is outside the repository at `%LOCALAPPDATA%\Wishlist\AgentHost\`; fallback reports use `%LOCALAPPDATA%\Wishlist\AgentReports\`.
-- Default scheduler capacity is two workers. Ticket locking and `depends-on` semantics are preserved.
-- Automatic routing uses Luna for bounded work and Sol for high-risk, architecture-sensitive, review, and investigation work. Terra is explicit-only; Astra requires its guard flag.
-- The default Wishlist hotkey is `Ctrl+Alt+W`. No Startup shortcut or other persistence is installed unless the user explicitly runs the installer.
-- A live worker requires the remote `dev` branch. If `origin/dev` is absent, report the blocker and do not bootstrap, commit, push, or create a remote branch.
-
-Use the exact `@@PI_TASK` envelope and keep `project: Wishlist` in Wishlist task examples.
+- Project-local handoff code lives under `Tools/Agent/Handoff/`; the root launcher is `Start-WishlistPiTask.ps1`.
+- Runtime state lives outside the repository at `%LOCALAPPDATA%\Wishlist\AgentHost\`; fallback reports use `%LOCALAPPDATA%\Wishlist\AgentReports\`.
+- Default scheduler capacity is two workers. Ticket locking and `depends-on` semantics remain authoritative.
+- Automatic routing uses Luna for bounded work and Sol for high-risk, architecture-sensitive, review and investigation work. Terra is explicit-only; Astra requires its guard flag.
+- The default Wishlist hotkey is `Ctrl+Alt+W`. No Startup shortcut or persistence is installed unless the user explicitly runs the installer.
+- A live worker requires the remote `dev` branch. If `origin/dev` is absent, report the blocker instead of bootstrapping or creating it implicitly.
+- Use the exact `@@PI_TASK` envelope and keep `project: Wishlist` in Wishlist task examples.
