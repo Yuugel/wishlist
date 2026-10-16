@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "projectId": "wishlist",
+  "displayName": "Wishlist",
+  "aliases": [
+    "Wishlist"
+  ],
+  "defaultBranch": "dev",
+  "instructions": "AGENTS.md",
+  "routingConfig": "Tools/Agent/Handoff/routing.json",
+  "handoffScript": "Tools/Agent/Handoff/Invoke-WishlistTask.ps1",
+  "reportingRepository": "Yuugel/wishlist"
+}
